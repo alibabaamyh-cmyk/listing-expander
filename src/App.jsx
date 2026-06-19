@@ -176,14 +176,24 @@ async function callLLM(prompt, imageBase64, imageType, maxTokens) {
   var text = (data.content || []).map(function(x) { return x.text || ""; }).join("") || "";
   var clean = text.replace(/```json\s*|```/g, "").trim();
   // 找到第一個 { 或 [ 作為 JSON 起點
-  var firstBrace = clean.indexOf("{");
-  var firstBracket = clean.indexOf("[");
-  var start = firstBrace === -1 ? firstBracket : firstBracket === -1 ? firstBrace : Math.min(firstBrace, firstBracket);
+  var fb = clean.indexOf("{"), fbr = clean.indexOf("[");
+  var start = fb === -1 ? fbr : fbr === -1 ? fb : Math.min(fb, fbr);
   if (start > 0) clean = clean.slice(start);
-  // 修復截斷的陣列
-  if (clean.startsWith("[") && !clean.endsWith("]")) {
-    var lastBrace = clean.lastIndexOf("}");
-    clean = lastBrace > 0 ? clean.slice(0, lastBrace + 1) + "]" : clean + "]";
+  // 嘗試直接 parse，失敗才修復
+  try { JSON.parse(clean); return clean; } catch(_) {}
+  // 找陣列中最後一個完整的 {} 物件，截斷在那裡
+  if (clean.startsWith("[")) {
+    var depth = 0, inStr = false, esc = false, lastEnd = -1;
+    for (var i = 0; i < clean.length; i++) {
+      var c = clean[i];
+      if (esc) { esc = false; continue; }
+      if (c === "\\" && inStr) { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === "{" || c === "[") depth++;
+      if (c === "}" || c === "]") { depth--; if (depth === 1 && c === "}") lastEnd = i; }
+    }
+    return lastEnd > 0 ? clean.slice(0, lastEnd + 1) + "]" : "[]";
   }
   return clean;
 }
