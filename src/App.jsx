@@ -957,7 +957,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <Field label="目標市場">
+                    <Field label="產品專注市場">
                       <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:6 }}>
                         {LISTING_MARKETS.map(function(m) {
                           return (
