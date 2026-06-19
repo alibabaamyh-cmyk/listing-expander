@@ -894,7 +894,7 @@ export default function App() {
                 <span style={{ fontSize:16 }}>🏢</span>
                 <div>
                   <span style={{ fontSize:13, fontWeight:700, color:"#3B5BDB" }}>公司資料已自動帶入：</span>
-                  <span style={{ fontSize:12, color:"#4B5563", marginLeft:6 }}>{companyName}｜{Object.keys(markets).filter(function(k) { return markets[k]; }).join("、") || "未設定市場"}｜{Object.keys(factoryCert).filter(function(k) { return factoryCert[k]; }).join("、") || "未設定認證"}</span>
+                  <span style={{ fontSize:12, color:"#4B5563", marginLeft:6 }}>{companyName}｜{[...Object.keys(markets).filter(function(k) { return markets[k]; }), ...(marketOtherChecked && marketOther.trim() ? [marketOther.trim()] : [])].join("、") || "未設定市場"}｜{Object.keys(factoryCert).filter(function(k) { return factoryCert[k]; }).join("、") || "未設定認證"}</span>
                 </div>
               </div>
             )}
