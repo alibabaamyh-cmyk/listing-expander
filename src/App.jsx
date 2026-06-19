@@ -560,15 +560,15 @@ export default function App() {
       var newListings = JSON.parse(results[0]);
       var checkedMap = {};
       newListings.forEach(function(_, i) { checkedMap[i] = true; });
+      var detail = typeof results[1] === "string" ? results[1] : "";
+      setDetailPage(detail); setShowDetail(!!detail);
       var newBatch = {
         id: Date.now() + "-" + Math.random().toString(36).slice(2,7),
         productName: productName,
         round: 1,
         listings: newListings,
         checkedMap: checkedMap,
-        collapsed: false,
-        detailPage: typeof results[1] === "string" ? results[1] : "",
-        showDetail: false
+        collapsed: false
       };
       setBatches(function(prev) { return prev.concat([newBatch]); });
       setLStep(3);
@@ -588,7 +588,7 @@ export default function App() {
     var extraAdv = prodAdvantages + (moreNote.trim() ? ("；補充：" + moreNote.trim()) : "");
     try {
       var listingPrompt = buildListingPrompt(productName, description, extraAdv, lMarket, sel, ctx);
-      var rawText = await callLLM(listingPrompt, imageBase64, imageFile ? imageFile.type : null, 8000);
+      var rawText = await callLLM(listingPrompt, imageBase64, imageFile ? imageFile.type : null, 12000);
       var newListings = JSON.parse(rawText);
       var checkedMap = {};
       newListings.forEach(function(_, i) { checkedMap[i] = true; });
@@ -1165,6 +1165,32 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* 商品詳情頁文案 — 共用，不綁定在任何一輪 */}
+                {detailPage && (
+                  <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, marginBottom:20, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
+                    <div style={{ background:"linear-gradient(135deg,#1B2A4A,#2D4270)", padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <span style={{ fontSize:18 }}>📄</span>
+                        <div>
+                          <div style={{ color:"#fff", fontWeight:700, fontSize:14 }}>商品詳情頁文案</div>
+                          <div style={{ color:"#8BA0C4", fontSize:11, marginTop:2 }}>七區塊完整結構，可直接複製到阿里國際站後台</div>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button onClick={function(){ setShowDetail(function(p){ return !p; }); }} style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", fontSize:12, cursor:"pointer", fontWeight:600 }}>
+                          {showDetail ? "▲ 收起" : "▼ 展開"}
+                        </button>
+                        <CopyBtn text={detailPage} label="複製全文" />
+                      </div>
+                    </div>
+                    {showDetail && (
+                      <div style={{ padding:"20px 22px" }}>
+                        <pre style={{ fontFamily:"Inter, PingFang TC, sans-serif", fontSize:13, color:"#374151", lineHeight:1.8, whiteSpace:"pre-wrap", wordBreak:"break-word", margin:0 }}>{detailPage}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {batches.map(function(batch, bi) {
                   var batchSelectedCount = Object.keys(batch.checkedMap).filter(function(k){ return batch.checkedMap[k]; }).length;
                   return (
@@ -1179,30 +1205,6 @@ export default function App() {
                       </div>
                       {!batch.collapsed && (
                         <div style={{ background:"#F0F2F8", borderRadius:"0 0 10px 10px", padding:"16px" }}>
-                          {batch.detailPage && (
-                            <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, marginBottom:16, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
-                              <div style={{ background:"linear-gradient(135deg,#1B2A4A,#2D4270)", padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                  <span style={{ fontSize:18 }}>📄</span>
-                                  <div>
-                                    <div style={{ color:"#fff", fontWeight:700, fontSize:14 }}>商品詳情頁文案</div>
-                                    <div style={{ color:"#8BA0C4", fontSize:11, marginTop:2 }}>七區塊完整結構，可直接複製到阿里國際站後台</div>
-                                  </div>
-                                </div>
-                                <div style={{ display:"flex", gap:8 }}>
-                                  <button onClick={function(){ toggleBatchDetail(batch.id); }} style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", fontSize:12, cursor:"pointer", fontWeight:600 }}>
-                                    {batch.showDetail ? "▲ 收起" : "▼ 展開"}
-                                  </button>
-                                  <CopyBtn text={batch.detailPage} label="複製全文" />
-                                </div>
-                              </div>
-                              {batch.showDetail && (
-                                <div style={{ padding:"20px 22px" }}>
-                                  <pre style={{ fontFamily:"Inter, PingFang TC, sans-serif", fontSize:13, color:"#374151", lineHeight:1.8, whiteSpace:"pre-wrap", wordBreak:"break-word", margin:0 }}>{batch.detailPage}</pre>
-                                </div>
-                              )}
-                            </div>
-                          )}
                           {batch.listings.map(function(item, i) {
                             return <ListingCard key={i} item={item} index={i} isChecked={!!batch.checkedMap[i]} onToggle={function(){ toggleListingChecked(batch.id, i); }} />;
                           })}
