@@ -168,10 +168,14 @@ async function callLLM(prompt, imageBase64, imageType, maxTokens) {
   var data = await res.json();
   if (data.error) throw new Error(data.error.message || "API 錯誤");
   var text = (data.content || []).map(function(x) { return x.text || ""; }).join("") || "";
-  var clean = text.replace(/```json|```/g, "").trim();
-  var start = clean.indexOf("[");
+  var clean = text.replace(/```json\s*|```/g, "").trim();
+  // 找到第一個 { 或 [ 作為 JSON 起點
+  var firstBrace = clean.indexOf("{");
+  var firstBracket = clean.indexOf("[");
+  var start = firstBrace === -1 ? firstBracket : firstBracket === -1 ? firstBrace : Math.min(firstBrace, firstBracket);
   if (start > 0) clean = clean.slice(start);
-  if (!clean.endsWith("]") && clean.includes("[")) {
+  // 修復截斷的陣列
+  if (clean.startsWith("[") && !clean.endsWith("]")) {
     var lastBrace = clean.lastIndexOf("}");
     clean = lastBrace > 0 ? clean.slice(0, lastBrace + 1) + "]" : clean + "]";
   }
@@ -511,7 +515,7 @@ export default function App() {
       '{"industry_summary":"一句話說明產業和主要買家","advantages":[{"id":"a1","label":"可量身客製化規格","hint":"說明"}],"certifications":[{"id":"c1","label":"CE認證","hint":"說明"}],"selling_points":[{"id":"s1","label":"工廠直供","hint":"說明"}]}'
     ].join("");
     try {
-      var rawText = await callLLM(prompt, imageBase64, imageFile ? imageFile.type : null, 2000);
+      var rawText = await callLLM(prompt, imageBase64, imageFile ? imageFile.type : null, 6000);
       var parsed = JSON.parse(rawText.replace(/```json|```/g, "").trim());
       setSuggestions(parsed);
       var init = {};
