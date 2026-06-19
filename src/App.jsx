@@ -652,6 +652,21 @@ export default function App() {
     tieredPrices, grossWeight, itemLength, itemWidth, itemHeight, hsCode, shippingTemplate, shippingLeadtime, logisticsAttr
   });
 
+  const tabs = [
+    { key:"company", label:"🏭 公司實力", sub:"旺舖・AI 助手", locked:false },
+    { key:"listing", label:"⚡ Listing 擴張器", sub: companyUnlocked ? "公司資料已帶入 ✓" : "可直接使用", locked:false }
+  ];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#F8FAFC", fontFamily:"Inter, PingFang TC, sans-serif" }}>
+      {/* 頂部標題 */}
+      <div style={{ background:"linear-gradient(135deg,#1B2A4A,#2D4270)", padding:"16px 32px", display:"flex", alignItems:"center" }}>
+        <span style={{ fontSize:26 }}>🛒</span>
+        <div style={{ marginLeft:12 }}>
+          <div style={{ color:"#fff", fontSize:18, fontWeight:800 }}>阿里巴巴 Listing 擴張器</div>
+          <div style={{ color:"#8BA0C4", fontSize:12 }}>AI 驅動・Gemini 2.5 Flash・免費使用</div>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"0 32px", display:"flex", gap:0 }}>
