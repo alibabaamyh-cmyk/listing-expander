@@ -7,16 +7,27 @@ async function callLLM(prompt, imageBase64, imageType, maxTokens) {
   const res = await fetch(WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, imageBase64, imageType, maxTokens: maxTokens || 3000 }),
+    body: JSON.stringify({ prompt, imageBase64, imageType, maxTokens: maxTokens || 8000 }),
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error.message || "API 錯誤");
   const text = (data.content || []).map((x) => x.text || "").join("");
-  const clean = text.replace(/```json|```/g, "").trim();
-  if (!clean.endsWith("]") && clean.includes("[")) {
-    const last = clean.lastIndexOf("},");
-    return last > 0 ? clean.substring(0, last + 1) + "]" : clean + "]";
-  }
+  let clean = text.replace(/```json[\s\S]*?```|```[\s\S]*?```/g, (m) => m.replace(/```json|```/g, "")).trim();
+  clean = clean.replace(/^```json|^```|```$/g, "").trim();
+
+  // 找到第一個 [ 開始
+  const start = clean.indexOf("[");
+  if (start === -1) throw new Error("AI 回傳格式錯誤，請重試");
+  clean = clean.slice(start);
+
+  // 嘗試直接 parse
+  try { return clean; } catch (_) {}
+
+  // 截斷修復：找最後一個完整的 }
+  const lastBrace = clean.lastIndexOf("}");
+  if (lastBrace > 0) clean = clean.slice(0, lastBrace + 1) + "]";
+  else clean = clean + '"}]';
+
   return clean;
 }
 
@@ -65,33 +76,21 @@ export default function App() {
     setLoading(true);
     setResults([]);
 
-    const prompt = `你是阿里巴巴跨境電商專家，請根據以下商品資訊，生成 10 個差異化的阿里巴巴 listing。
+    const prompt = `You are an Alibaba.com listing expert. Generate exactly 10 differentiated product listings in JSON array format.
 
-商品名稱：${productName}
-${productDesc ? `商品描述：${productDesc}` : ""}
+Product: ${productName}
+${productDesc ? `Details: ${productDesc}` : ""}
 
-每個 listing 必須：
-- 針對不同的買家需求或應用場景切入
-- 使用不同的英文關鍵字組合（阿里巴巴買家常搜尋的詞）
-- Title 50-150 字元，包含核心關鍵字
-- Keywords 5-8 個搜尋關鍵字（英文）
-- Description 100-200 字，突出差異化賣點
-- Category 建議分類
+Rules:
+- Each listing targets a different buyer segment or use case
+- Title: 50-120 chars with keywords
+- Keywords: array of 5 English search terms
+- Description: 80-150 chars
+- Category: suggested Alibaba category
+- Selling_point: one key differentiator
 
-請以 JSON 陣列格式回覆，每個元素包含：title, keywords (陣列), description, category, selling_point
-
-範例格式：
-[
-  {
-    "title": "...",
-    "keywords": ["kw1", "kw2", "kw3"],
-    "description": "...",
-    "category": "...",
-    "selling_point": "..."
-  }
-]
-
-只回傳 JSON，不要其他說明。`;
+Return ONLY a JSON array, no markdown, no explanation:
+[{"title":"...","keywords":["k1","k2","k3","k4","k5"],"description":"...","category":"...","selling_point":"..."},...]`;
 
     try {
       const raw = await callLLM(prompt, imageBase64, imageFile?.type, 4000);
