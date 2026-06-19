@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 
 // ─── 常數 ───────────────────────────────────────────────
@@ -209,14 +209,14 @@ function buildListingPrompt(pName, pDesc, pAdv, pMkt, selected, companyCtx) {
     "- 目標市場：" + pMkt + "\n",
     selected ? "- 商家確認具備的優勢與賣點：" + selected + "\n" : "",
     "\n【屬性設計規則】\n",
-    "先定義6-8個固定屬性名稱（英文），10組中完全一致，只有屬性值隨角度變化。\n",
+    "先定義6-8個固定屬性名稱（英文），20組中完全一致，只有屬性值隨角度變化。\n",
     "錯誤示範：A1用Material，A2用Main Material 禁止\n",
-    "\n請根據5個差異化維度生成10組Listing（每維度2組）：\n",
+    "\n請根據5個差異化維度生成20組Listing（每維度4組）：\n",
     "維度：應用場景、買家身份、規格重點、地區市場、賣點角度\n",
     "\n嚴格規則：\n",
     "1. 所有內容必須基於商家實際資訊，不可捏造不存在的認證或特性\n",
-    "2. 10組標題、關鍵詞必須明顯不同\n",
-    "3. 屬性名稱10組完全一致，屬性值隨角度切換\n",
+    "2. 20組標題、關鍵詞必須明顯不同\n",
+    "3. 屬性名稱20組完全一致，屬性值隨角度切換\n",
     "4. 屬性名稱與屬性值全部英文\n",
     selected ? "5. 只使用商家確認具備的賣點\n" : "",
     "\n每組包含：dimension、angle（10字內）、title_en（150字元內）、title_zh、keywords_en（5-8個逗號分隔）、keywords_zh（5-8個頓號分隔）、attributes（name+value 6-8個）、image_prompt（英文攝影風格，900x900 pixels square format）\n",
@@ -398,6 +398,8 @@ export default function App() {
   const [checked, setChecked] = IS({});
   const [lLoading1, setLLoading1] = IS(false);
   const [lLoading2, setLLoading2] = IS(false);
+  const [moreLoading, setMoreLoading] = IS(false);
+  const [loadingSecs, setLoadingSecs] = IS(0);
   const [lError, setLError] = IS("");
   const [exportMsg, setExportMsg] = IS("");
   const [detailPage, setDetailPage] = IS("");
@@ -407,7 +409,6 @@ export default function App() {
   const [batches, setBatches] = IS([]);
   const [expandMore, setExpandMore] = IS(false);
   const [moreNote, setMoreNote] = IS("");
-  const [moreLoading, setMoreLoading] = IS(false);
 
   // 商品詳情頁欄位
   const [prodSpecs, setProdSpecs] = IS("");
@@ -439,6 +440,15 @@ export default function App() {
   const [logisticsAttr, setLogisticsAttr] = IS("Ordinary goods");
 
   const fileRef = IR();
+
+  // 計時器：任何 loading 中就每秒 +1，結束重設
+  const isLoading = lLoading1 || lLoading2 || moreLoading;
+  useEffect(function() {
+    if (!isLoading) { setLoadingSecs(0); return; }
+    setLoadingSecs(0);
+    var t = setInterval(function() { setLoadingSecs(function(s) { return s + 1; }); }, 1000);
+    return function() { clearInterval(t); };
+  }, [isLoading]);
 
   // ── helpers ──
   const inp = { width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #e2e8f0", fontSize:13, outline:"none", boxSizing:"border-box", color:"#1e293b", fontFamily:"inherit" };
@@ -554,7 +564,7 @@ export default function App() {
       var listingPrompt = buildListingPrompt(productName, description, prodAdvantages, lMarket, sel, ctx);
       var detailPrompt = buildDetailPrompt(productName, description, prodAdvantages, prodSpecs, prodPackaging, prodMoq, prodLeadtime, prodCustomize, prodPayment, prodBuyerType, lMarket, sel, ctx);
       var results = await Promise.all([
-        callLLM(listingPrompt, imageBase64, imageFile ? imageFile.type : null, 8000),
+        callLLM(listingPrompt, imageBase64, imageFile ? imageFile.type : null, 16000),
         callLLM(detailPrompt, imageBase64, imageFile ? imageFile.type : null, 6000).catch(function() { return "（商品詳情頁生成失敗）"; })
       ]);
       var newListings = JSON.parse(results[0]);
@@ -576,7 +586,7 @@ export default function App() {
     finally { setLLoading2(false); }
   };
 
-  // 再擴10組：基於目前/調整後的產品資訊，對同一產品再生成一輪，疊加進 batches
+  // 再擴20組：基於目前/調整後的產品資訊，對同一產品再生成一輪，疊加進 batches
   const generateMoreForSameProduct = async () => {
     setLError(""); setMoreLoading(true);
     var sel = suggestions ? [].concat(
@@ -588,7 +598,7 @@ export default function App() {
     var extraAdv = prodAdvantages + (moreNote.trim() ? ("；補充：" + moreNote.trim()) : "");
     try {
       var listingPrompt = buildListingPrompt(productName, description, extraAdv, lMarket, sel, ctx);
-      var rawText = await callLLM(listingPrompt, imageBase64, imageFile ? imageFile.type : null, 12000);
+      var rawText = await callLLM(listingPrompt, imageBase64, imageFile ? imageFile.type : null, 16000);
       var newListings = JSON.parse(rawText);
       var checkedMap = {};
       newListings.forEach(function(_, i) { checkedMap[i] = true; });
@@ -1066,7 +1076,7 @@ export default function App() {
 
                     {lError && <div style={{ background:"#FFF1F2", color:"#E11D48", fontSize:12, padding:"8px 12px", borderRadius:8, marginBottom:12 }}>{lError}</div>}
                     <button onClick={analyzeProduct} disabled={lLoading1} style={{ width:"100%", padding:"12px", background: lLoading1 ? "#93C5FD" : "linear-gradient(135deg,#1B2A4A,#2D4270)", color:"#fff", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor: lLoading1 ? "not-allowed" : "pointer" }}>
-                      {lLoading1 ? "⏳ AI 分析中…" : "下一步：AI 分析產品優勢 →"}
+                      {lLoading1 ? ("⏳ AI 分析中… " + loadingSecs + "s") : "下一步：AI 分析產品優勢 →"}
                     </button>
                   </div>
                 </div>
@@ -1077,7 +1087,7 @@ export default function App() {
                     {[
                       { n:1, t:"填寫產品資訊", d:"輸入產品名稱、描述、優勢，越詳細AI越準確" },
                       { n:2, t:"確認產品優勢清單", d:"AI 根據產業分析，列出建議的認證、賣點供您勾選確認" },
-                      { n:3, t:"生成 10 組 Listing", d:"AI 從5個維度產出10組差異化建議，避免重舖" }
+                      { n:3, t:"生成 20 組 Listing", d:"AI 從5個維度產出20組差異化建議，避免重舖" }
                     ].map(function(s) {
                       return (
                         <div key={s.n} style={{ display:"flex", gap:14, marginBottom:18 }}>
@@ -1134,7 +1144,7 @@ export default function App() {
                   <div style={{ display:"flex", gap:10 }}>
                     <button onClick={() => setLStep(1)} style={{ flex:1, padding:"11px", background:"#F3F4F6", color:"#374151", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer" }}>← 返回修改</button>
                     <button onClick={generateListings} disabled={lLoading2} style={{ flex:2, padding:"11px", background: lLoading2 ? "#93C5FD" : "linear-gradient(135deg,#ff6b35,#f7931e)", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor: lLoading2 ? "not-allowed" : "pointer" }}>
-                      {lLoading2 ? "⏳ 生成中…" : "⚡ 確認並生成 10 組 Listing"}
+                      {lLoading2 ? ("⏳ 生成中… " + loadingSecs + "s（約需 30-60 秒）") : "⚡ 確認並生成 20 組 Listing"}
                     </button>
                   </div>
                 </div>
@@ -1219,16 +1229,16 @@ export default function App() {
                   {!expandMore && (
                     <div style={{ display:"flex", gap:12 }}>
                       <button onClick={function(){ setExpandMore(true); }} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,#ff6b35,#f7931e)", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer" }}>
-                        🔁 再擴10組（同一產品：{productName}）
+                        🔁 再擴20組（同一產品：{productName}）
                       </button>
                       <button onClick={resetProductOnly} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,#059669,#10b981)", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer" }}>
-                        ＋ 新增其它品項的10組產品
+                        ＋ 新增其它品項的20組產品
                       </button>
                     </div>
                   )}
                   {expandMore && (
                     <div>
-                      <div style={{ fontWeight:700, color:"#1B2A4A", fontSize:14, marginBottom:10 }}>🔁 再擴10組 — {productName}</div>
+                      <div style={{ fontWeight:700, color:"#1B2A4A", fontSize:14, marginBottom:10 }}>🔁 再擴20組 — {productName}</div>
                       <div style={{ fontSize:12, color:"#6B7280", marginBottom:10 }}>可補充想強調的重點或調整方向，留空則直接以原資訊再生成新的差異化角度。</div>
                       <textarea value={moreNote} onChange={function(e){ setMoreNote(e.target.value); }} rows={3} placeholder="例：這次想多強調歐洲市場的認證、或加強耐用度訴求…" style={{ width:"100%", padding:"9px 12px", borderRadius:8, border:"1.5px solid #e2e8f0", fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:"inherit", resize:"vertical", marginBottom:14 }} />
                       {lError && <div style={{ background:"#FFF1F2", color:"#E11D48", fontSize:12, padding:"8px 12px", borderRadius:8, marginBottom:12 }}>{lError}</div>}
@@ -1238,7 +1248,7 @@ export default function App() {
                           {moreLoading ? "⏳ 生成中…" : "略過，直接再產出"}
                         </button>
                         <button onClick={generateMoreForSameProduct} disabled={moreLoading} style={{ flex:2, padding:"11px", background: moreLoading ? "#93C5FD" : "linear-gradient(135deg,#ff6b35,#f7931e)", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor: moreLoading ? "not-allowed" : "pointer" }}>
-                          {moreLoading ? "⏳ 生成中…" : "⚡ 帶補充內容再生成10組"}
+                          {moreLoading ? ("⏳ 生成中… " + loadingSecs + "s（約需 30-60 秒）") : "⚡ 帶補充內容再生成20組"}
                         </button>
                       </div>
                     </div>
