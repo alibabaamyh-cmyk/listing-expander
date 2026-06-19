@@ -160,11 +160,17 @@ const WORKER_URL = "https://listing-expander-api.alibaba-amy-h.workers.dev";
 
 async function callLLM(prompt, imageBase64, imageType, maxTokens) {
   var tokens = maxTokens || 2000;
-  var res = await fetch(WORKER_URL, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ prompt, imageBase64, imageType, maxTokens: tokens })
-  });
+  var res;
+  try {
+    res = await fetch(WORKER_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ prompt, imageBase64, imageType, maxTokens: tokens })
+    });
+  } catch(netErr) {
+    throw new Error("網路連線失敗，請重新整理頁面再試 (" + netErr.message + ")");
+  }
+  if (!res.ok) throw new Error("伺服器錯誤 " + res.status);
   var data = await res.json();
   if (data.error) throw new Error(data.error.message || "API 錯誤");
   var text = (data.content || []).map(function(x) { return x.text || ""; }).join("") || "";
