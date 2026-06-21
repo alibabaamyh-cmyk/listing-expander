@@ -248,16 +248,22 @@ export default function Advisor() {
       (s.dim2Label || "維度2") + "可選值：" + d2 + "\n",
       (s.dim3Label || "維度3") + "可選值：" + d3 + "\n\n",
       "要求：\n",
-      "- 將上方各維度的可選值交叉組合，讓每組Listing主打不同的組合\n",
-      "- 生成恰好" + count + "組，標題各不相同\n",
-      "- 每組包含：title_en（英文標題150字元內）、title_zh（中文標題）、keywords_en（5個英文關鍵詞逗號分隔）、keywords_zh（5個中文關鍵詞頓號分隔）、dimension（本組主打組合，15字以內）\n\n",
+      "- 將各維度可選值交叉組合，讓每組Listing主打不同的組合，標題各不相同\n",
+      "- 生成恰好" + count + "組\n",
+      "- 每組包含以下欄位：\n",
+      "  title_en: 英文標題（150字元內，適合阿里國際站SEO）\n",
+      "  title_zh: 中文標題\n",
+      "  keywords_en: 5個英文關鍵詞（逗號分隔）\n",
+      "  keywords_zh: 5個中文關鍵詞（頓號分隔）\n",
+      "  attributes: 陣列，5個B2B買家重視的產品屬性，格式 [{\"name\":\"屬性名（英文）\",\"value\":\"屬性值（英文）\"}]\n",
+      "  image_prompt: 圖片生成提示詞（英文，適合 Midjourney，描述產品主視覺，40字以內）\n\n",
       "只回傳JSON陣列，不要其他文字：\n",
-      '[{"title_en":"","title_zh":"","keywords_en":"","keywords_zh":"","dimension":""}]'
+      '[{"title_en":"","title_zh":"","keywords_en":"","keywords_zh":"","attributes":[{"name":"","value":""}],"image_prompt":""}]'
     ].join("");
 
     try {
-      var raw = await callLLM(prompt, null, null, 18000);
-      var listings = JSON.parse(raw);
+      var raw = await callLLM(prompt, null, null, 22000);
+      var listings = JSON.parse(raw).map(function (l) { return { ...l, selected: true }; });
       setProducts(function (prev) {
         var next = [...prev];
         next[idx] = { ...next[idx], generating: false, done: true, listings: listings };
@@ -321,21 +327,46 @@ export default function Advisor() {
     });
   }
 
-  function exportAllToExcel() {
-    var rows = [["產品名稱", "維度1", "維度2", "維度3", "英文標題", "中文標題", "英文關鍵詞", "中文關鍵詞", "維度說明"]];
+  function toggleSelect(pidx, lidx) {
+    setProducts(function (prev) {
+      var n = [...prev];
+      var ls = [...n[pidx].listings];
+      ls[lidx] = { ...ls[lidx], selected: !ls[lidx].selected };
+      n[pidx] = { ...n[pidx], listings: ls };
+      return n;
+    });
+  }
+
+  function toggleSelectAll(pidx, val) {
+    setProducts(function (prev) {
+      var n = [...prev];
+      n[pidx] = { ...n[pidx], listings: n[pidx].listings.map(function (l) { return { ...l, selected: val }; }) };
+      return n;
+    });
+  }
+
+  function exportSelected() {
+    var headers = ["產品名稱", "英文標題", "中文標題", "英文關鍵詞", "中文關鍵詞",
+      "屬性1名", "屬性1值", "屬性2名", "屬性2值", "屬性3名", "屬性3值",
+      "屬性4名", "屬性4值", "屬性5名", "屬性5值", "圖片Prompt"];
+    var rows = [headers];
     products.forEach(function (p) {
-      p.listings.forEach(function (l) {
-        rows.push([p.name, p.dim1, p.dim2, p.dim3, l.title_en, l.title_zh, l.keywords_en, l.keywords_zh, l.dimension]);
+      p.listings.filter(function (l) { return l.selected; }).forEach(function (l) {
+        var attrs = l.attributes || [];
+        var attrCols = [];
+        for (var i = 0; i < 5; i++) { attrCols.push(attrs[i] ? attrs[i].name : "", attrs[i] ? attrs[i].value : ""); }
+        rows.push([p.name, l.title_en, l.title_zh, l.keywords_en, l.keywords_zh, ...attrCols, l.image_prompt || ""]);
       });
     });
     var ws = XLSX.utils.aoa_to_sheet(rows);
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "裂變發品");
-    XLSX.writeFile(wb, "advisor_listings.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "匯入清單");
+    XLSX.writeFile(wb, "alibaba_import_list.xlsx");
     setExportMsg("✓ 已下載");
     setTimeout(function () { setExportMsg(""); }, 2500);
   }
 
+  var selectedTotal = products.reduce(function (s, p) { return s + p.listings.filter(function (l) { return l.selected; }).length; }, 0);
   var totalListings = products.reduce(function (s, p) { return s + p.listings.length; }, 0);
   var doneCount = products.filter(function (p) { return p.done; }).length;
 
@@ -545,9 +576,9 @@ export default function Advisor() {
             <Card>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <SectionTitle style={{ margin: 0, border: "none", padding: 0 }}>📦 逐一擴品</SectionTitle>
-                {totalListings > 0 && (
-                  <Btn onClick={exportAllToExcel} color="navy" style={{ fontSize: 13, padding: "8px 16px" }}>
-                    {exportMsg || ("⬇ 匯出 Excel（" + totalListings + " 組）")}
+                {selectedTotal > 0 && (
+                  <Btn onClick={exportSelected} color="navy" style={{ fontSize: 13, padding: "8px 16px" }}>
+                    {exportMsg || ("⬇ 匯出選取清單（" + selectedTotal + " 組）")}
                   </Btn>
                 )}
               </div>
@@ -680,10 +711,91 @@ export default function Advisor() {
                     <div style={{ display: "flex", justifyContent: "flex-end" }}>
                       <Btn onClick={function () { expandProduct(idx); }}
                         disabled={p.generating || ((p.dim1||[]).length === 0 && (p.dim2||[]).length === 0 && (p.dim3||[]).length === 0)}
-                        color={p.done ? "green" : "orange"} style={{ fontSize: 13, padding: "10px 24px" }}>
+                        color={p.done ? "ghost" : "orange"} style={{ fontSize: 13, padding: "10px 24px" }}>
                         {p.generating ? ("⏳ " + loadingSecs + "s…（約需 30-60 秒）") : p.done ? "🔄 重新生成" : "⚡ AI 擴品 " + (p.count || 20) + " 組"}
                       </Btn>
                     </div>
+
+                    {/* ── Listing 預覽 ── */}
+                    {p.listings.length > 0 && (
+                      <div style={{ marginTop: 20, borderTop: "2px solid " + C.border, paddingTop: 18 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>
+                            預覽結果 — 共 {p.listings.length} 組
+                          </div>
+                          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: C.muted }}>
+                              已選 <strong style={{ color: C.navy }}>{p.listings.filter(function(l){return l.selected;}).length}</strong> / {p.listings.length} 組
+                            </span>
+                            <span onClick={function(){toggleSelectAll(idx,true);}} style={{ fontSize: 12, color: C.orange, cursor:"pointer", textDecoration:"underline" }}>全選</span>
+                            <span onClick={function(){toggleSelectAll(idx,false);}} style={{ fontSize: 12, color: C.muted, cursor:"pointer", textDecoration:"underline" }}>清除</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          {p.listings.map(function (l, li) {
+                            var attrs = l.attributes || [];
+                            return (
+                              <div key={li}
+                                onClick={function () { toggleSelect(idx, li); }}
+                                style={{ border: "2px solid " + (l.selected ? C.orange : C.border), borderRadius: 12, padding: 14, background: l.selected ? "#FFFBF7" : "#FAFAFA", cursor: "pointer", transition: "all 0.12s", userSelect: "none" }}>
+
+                                {/* 頂部：勾選 + 序號 */}
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <div style={{ width: 18, height: 18, borderRadius: 5, border: "2px solid " + (l.selected ? C.orange : "#D1D5DB"), background: l.selected ? C.orange : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                      {l.selected && <span style={{ color: "#fff", fontSize: 11, fontWeight: 800 }}>✓</span>}
+                                    </div>
+                                    <span style={{ fontSize: 11, color: l.selected ? C.orange : C.muted, fontWeight: l.selected ? 700 : 400 }}>
+                                      {l.selected ? "已加入清單" : "加入匯入清單"}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: 11, color: C.muted }}>#{li + 1}</span>
+                                </div>
+
+                                {/* 標題 */}
+                                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.5, marginBottom: 4 }}>{l.title_en}</div>
+                                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>{l.title_zh}</div>
+
+                                {/* 關鍵詞 */}
+                                <div style={{ marginBottom: 10 }}>
+                                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>🔑 關鍵詞</div>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                    {(l.keywords_en || "").split(",").map(function (k, ki) {
+                                      return k.trim() ? <span key={ki} style={{ fontSize: 10, padding: "2px 7px", background: "#EEF2FF", color: "#4F46E5", borderRadius: 4 }}>{k.trim()}</span> : null;
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* 屬性 */}
+                                {attrs.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>📋 屬性</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                      {attrs.map(function (a, ai) {
+                                        return (
+                                          <div key={ai} style={{ display: "flex", gap: 6, fontSize: 11 }}>
+                                            <span style={{ color: C.muted, flexShrink: 0, minWidth: 80 }}>{a.name}</span>
+                                            <span style={{ color: C.text, fontWeight: 500 }}>{a.value}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 圖片 Prompt */}
+                                {l.image_prompt && (
+                                  <div style={{ background: "#FAF5FF", border: "1px solid #E9D5FF", borderRadius: 7, padding: "6px 10px", fontSize: 11, color: "#7C3AED" }}>
+                                    🎨 {l.image_prompt}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
