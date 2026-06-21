@@ -4,13 +4,13 @@ import ReactDOM from "react-dom/client";
 
 const WORKER_URL = "https://listing-expander-api.alibaba-amy-h.workers.dev";
 
-async function callLLM(prompt, fileBase64, fileMime, maxTokens) {
+async function callLLM(prompt, fileBase64, fileMime, maxTokens, disableThinking) {
   var res;
   try {
     res = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, imageBase64: fileBase64, imageType: fileMime, maxTokens: maxTokens || 4000 })
+      body: JSON.stringify({ prompt, imageBase64: fileBase64, imageType: fileMime, maxTokens: maxTokens || 4000, disableThinking: !!disableThinking })
     });
   } catch (e) {
     throw new Error("網路連線失敗，請重新整理後再試（" + e.message + "）");
@@ -262,7 +262,7 @@ export default function Advisor() {
     ].join("");
 
     try {
-      var raw = await callLLM(prompt, null, null, 22000);
+      var raw = await callLLM(prompt, null, null, 22000, true);
       var listings = JSON.parse(raw).map(function (l) { return { ...l, selected: true }; });
       setProducts(function (prev) {
         var next = [...prev];
