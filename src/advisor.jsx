@@ -166,23 +166,25 @@ export default function Advisor() {
     var prompt = "你是阿里巴巴國際站電商顧問，專精跨境B2B裂變策略。\n\n" +
       "商家背景：\n" + ctx + "\n\n" +
       "商家的產品：\n" + names.map(function (n, i) { return (i + 1) + ". " + n; }).join("\n") + "\n\n" +
-      "請針對這些具體產品，設計最適合的3個裂變維度。每個維度給3-5個實際可用的範例（不要太抽象）。\n\n" +
+      "請針對這些具體產品，設計最適合的3個裂變維度。每個維度給5個實際可用的具體範例（不要太抽象，直接給可用的文字）。\n\n" +
       "只回傳JSON：\n" +
       '{"strategySummary":"針對這些產品的裂變策略說明（繁體中文，2句）","estimatedListings":預計可達到的listing總數（整數）,' +
-      '"dim1Label":"維度1名稱","dim1Examples":["具體範例1","具體範例2","具體範例3"],' +
-      '"dim2Label":"維度2名稱","dim2Examples":["具體範例1","具體範例2","具體範例3"],' +
-      '"dim3Label":"維度3名稱","dim3Examples":["具體範例1","具體範例2","具體範例3"]}';
+      '"dim1Label":"維度1名稱","dim1Examples":["具體範例1","具體範例2","具體範例3","具體範例4","具體範例5"],' +
+      '"dim2Label":"維度2名稱","dim2Examples":["具體範例1","具體範例2","具體範例3","具體範例4","具體範例5"],' +
+      '"dim3Label":"維度3名稱","dim3Examples":["具體範例1","具體範例2","具體範例3","具體範例4","具體範例5"]}';
 
     try {
       var raw = await callLLM(prompt, pdfBase64, pdfBase64 ? "application/pdf" : null, 3000);
       var result = JSON.parse(raw);
       setStrategy(result);
+      // 預設全選所有維度選項
       var prods = names.map(function (name) {
         return {
           name: name,
-          dim1: (result.dim1Examples || [])[0] || "",
-          dim2: (result.dim2Examples || [])[0] || "",
-          dim3: (result.dim3Examples || [])[0] || "",
+          dim1: result.dim1Examples ? [...result.dim1Examples] : [],
+          dim2: result.dim2Examples ? [...result.dim2Examples] : [],
+          dim3: result.dim3Examples ? [...result.dim3Examples] : [],
+          count: 20,
           listings: [], generating: false, done: false, error: ""
         };
       });
@@ -199,26 +201,35 @@ export default function Advisor() {
   async function expandProduct(idx) {
     var p = products[idx];
     if (!p.name.trim()) return;
+    var d1 = (p.dim1 && p.dim1.length) ? p.dim1.join(" / ") : "";
+    var d2 = (p.dim2 && p.dim2.length) ? p.dim2.join(" / ") : "";
+    var d3 = (p.dim3 && p.dim3.length) ? p.dim3.join(" / ") : "";
+    var count = p.count || 20;
+    if (!d1 && !d2 && !d3) { setProducts(function (prev) { var n = [...prev]; n[idx] = { ...n[idx], error: "請至少選擇一個維度選項" }; return n; }); return; }
+
     setProducts(function (prev) {
       var next = [...prev];
       next[idx] = { ...next[idx], generating: true, error: "", listings: [] };
       return next;
     });
 
+    var s = strategy || {};
     var prompt = [
-      "你是阿里巴巴國際站電商專家。請根據以下裂變策略，為這個產品生成20組差異化Listing。\n",
+      "你是阿里巴巴國際站電商專家。請根據以下裂變維度，為這個產品生成" + count + "組差異化Listing。\n\n",
       "產品名稱：" + p.name + "\n",
-      (strategy && strategy.dim1Label ? strategy.dim1Label : "規格/成分") + "（維度1）：" + p.dim1 + "\n",
-      (strategy && strategy.dim2Label ? strategy.dim2Label : "應用場景/受眾") + "（維度2）：" + p.dim2 + "\n",
-      (strategy && strategy.dim3Label ? strategy.dim3Label : "B2B服務模式") + "（維度3）：" + p.dim3 + "\n\n",
-      "將3個維度交叉組合，生成20組標題各不相同的差異化Listing。\n",
-      "每組包含：title_en（英文標題150字元內）、title_zh（中文標題）、keywords_en（5個英文關鍵詞逗號分隔）、keywords_zh（5個中文關鍵詞頓號分隔）、dimension（本組主打的維度說明，10字以內）\n\n",
+      (s.dim1Label || "維度1") + "可選值：" + d1 + "\n",
+      (s.dim2Label || "維度2") + "可選值：" + d2 + "\n",
+      (s.dim3Label || "維度3") + "可選值：" + d3 + "\n\n",
+      "要求：\n",
+      "- 將上方各維度的可選值交叉組合，讓每組Listing主打不同的組合\n",
+      "- 生成恰好" + count + "組，標題各不相同\n",
+      "- 每組包含：title_en（英文標題150字元內）、title_zh（中文標題）、keywords_en（5個英文關鍵詞逗號分隔）、keywords_zh（5個中文關鍵詞頓號分隔）、dimension（本組主打組合，15字以內）\n\n",
       "只回傳JSON陣列，不要其他文字：\n",
       '[{"title_en":"","title_zh":"","keywords_en":"","keywords_zh":"","dimension":""}]'
     ].join("");
 
     try {
-      var raw = await callLLM(prompt, null, null, 16000);
+      var raw = await callLLM(prompt, null, null, 18000);
       var listings = JSON.parse(raw);
       setProducts(function (prev) {
         var next = [...prev];
@@ -234,8 +245,18 @@ export default function Advisor() {
     }
   }
 
-  function updateProduct(idx, field, value) {
-    setProducts(function (prev) { var n = [...prev]; n[idx] = { ...n[idx], [field]: value }; return n; });
+  function toggleDim(idx, field, val) {
+    setProducts(function (prev) {
+      var n = [...prev];
+      var arr = n[idx][field] || [];
+      n[idx] = { ...n[idx], [field]: arr.includes(val) ? arr.filter(function (x) { return x !== val; }) : [...arr, val] };
+      return n;
+    });
+  }
+
+  function updateCount(idx, val) {
+    var v = Math.min(40, Math.max(10, parseInt(val) || 10));
+    setProducts(function (prev) { var n = [...prev]; n[idx] = { ...n[idx], count: v }; return n; });
   }
 
   function exportAllToExcel() {
@@ -470,49 +491,87 @@ export default function Advisor() {
               </div>
 
               {products.map(function (p, idx) {
+                var dims = [
+                  { field: "dim1", label: strategy.dim1Label, opts: strategy.dim1Examples || [], color: "#4F46E5", bg: "#EEF2FF" },
+                  { field: "dim2", label: strategy.dim2Label, opts: strategy.dim2Examples || [], color: "#0369A1", bg: "#EFF6FF" },
+                  { field: "dim3", label: strategy.dim3Label, opts: strategy.dim3Examples || [], color: C.green, bg: "#F0FDF4" },
+                ];
+                var totalCombos = (p.dim1 || []).length * (p.dim2 || []).length * (p.dim3 || []).length;
+
                 return (
-                  <div key={idx} style={{ border: "1px solid " + C.border, borderRadius: 12, padding: 18, marginBottom: 14, background: p.done ? "#F0FDF4" : "#FAFAFA" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 7, background: p.done ? C.green : C.navy, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+                  <div key={idx} style={{ border: "1.5px solid " + (p.done ? "#86EFAC" : C.border), borderRadius: 14, padding: 20, marginBottom: 16, background: p.done ? "#F0FDF4" : "#FAFAFA" }}>
+
+                    {/* 產品標頭 */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 8, background: p.done ? C.green : C.navy, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
                         {p.done ? "✓" : idx + 1}
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>{p.name}</div>
-                      {p.done && <span style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>已生成 {p.listings.length} 組</span>}
+                      <div style={{ fontWeight: 700, fontSize: 15, color: C.text, flex: 1 }}>{p.name}</div>
+                      {p.done && <span style={{ fontSize: 13, color: C.green, fontWeight: 600 }}>已生成 {p.listings.length} 組</span>}
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 12 }}>
-                      {[
-                        { field: "dim1", label: strategy.dim1Label, opts: strategy.dim1Examples || [], color: "#4F46E5" },
-                        { field: "dim2", label: strategy.dim2Label, opts: strategy.dim2Examples || [], color: "#0369A1" },
-                        { field: "dim3", label: strategy.dim3Label, opts: strategy.dim3Examples || [], color: C.green },
-                      ].map(function (d) {
+                    {/* 維度多選 */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 18 }}>
+                      {dims.map(function (d) {
+                        var selected = p[d.field] || [];
                         return (
-                          <div key={d.field}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: d.color, marginBottom: 5 }}>{d.label}</div>
-                            <input value={p[d.field]} onChange={function (e) { updateProduct(idx, d.field, e.target.value); }}
-                              placeholder="填入或點選建議"
-                              style={{ ...C.inp, fontSize: 12, borderColor: d.color + "66" }} />
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
+                          <div key={d.field} style={{ background: d.bg, borderRadius: 10, padding: 14 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                              <div style={{ fontWeight: 700, fontSize: 13, color: d.color }}>{d.label}</div>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <span onClick={function () { setProducts(function (prev) { var n=[...prev]; n[idx]={...n[idx],[d.field]:[...d.opts]}; return n; }); }}
+                                  style={{ fontSize: 11, color: d.color, cursor: "pointer", textDecoration: "underline" }}>全選</span>
+                                <span onClick={function () { setProducts(function (prev) { var n=[...prev]; n[idx]={...n[idx],[d.field]:[]}; return n; }); }}
+                                  style={{ fontSize: 11, color: C.muted, cursor: "pointer", textDecoration: "underline" }}>清除</span>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                               {d.opts.map(function (opt, oi) {
-                                var active = p[d.field] === opt;
+                                var isChecked = selected.includes(opt);
                                 return (
-                                  <span key={oi} onClick={function () { updateProduct(idx, d.field, opt); }}
-                                    style={{ fontSize: 11, padding: "3px 8px", background: active ? d.color : "#fff", color: active ? "#fff" : d.color, borderRadius: 4, cursor: "pointer", border: "1px solid " + d.color + "55", transition: "all 0.1s" }}>
-                                    {opt}
-                                  </span>
+                                  <div key={oi} onClick={function () { toggleDim(idx, d.field, opt); }}
+                                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, cursor: "pointer", border: "1.5px solid " + (isChecked ? d.color : d.color + "44"), background: isChecked ? d.color : "#fff", transition: "all 0.12s", userSelect: "none" }}>
+                                    <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + (isChecked ? "#fff" : d.color + "88"), background: isChecked ? "#fff" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                      {isChecked && <div style={{ width: 7, height: 7, background: d.color, borderRadius: 1 }} />}
+                                    </div>
+                                    <span style={{ fontSize: 12, color: isChecked ? "#fff" : C.text, fontWeight: isChecked ? 600 : 400 }}>{opt}</span>
+                                  </div>
                                 );
                               })}
                             </div>
+                            <div style={{ marginTop: 8, fontSize: 11, color: d.color }}>已選 {selected.length} 項</div>
                           </div>
                         );
                       })}
                     </div>
 
-                    {p.error && <div style={{ color: "#E11D48", fontSize: 12, marginBottom: 8 }}>{p.error}</div>}
+                    {/* 生成數量 */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#fff", borderRadius: 10, border: "1px solid " + C.border, marginBottom: 14 }}>
+                      <div>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>生成幾組 Listing？</span>
+                        {totalCombos > 0 && (
+                          <span style={{ fontSize: 12, color: C.muted, marginLeft: 10 }}>
+                            （你選的維度組合共 {totalCombos} 種，建議生成 {Math.min(totalCombos, 40)} 組）
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1.5px solid " + C.border, borderRadius: 9, overflow: "hidden" }}>
+                        <button onClick={function () { updateCount(idx, (p.count || 20) - 10); }}
+                          style={{ width: 36, height: 36, border: "none", background: "#F3F4F6", cursor: "pointer", fontSize: 18, color: C.text, fontWeight: 600 }}>−</button>
+                        <div style={{ width: 52, textAlign: "center", fontSize: 16, fontWeight: 800, color: C.navy }}>{p.count || 20}</div>
+                        <button onClick={function () { updateCount(idx, (p.count || 20) + 10); }}
+                          style={{ width: 36, height: 36, border: "none", background: "#F3F4F6", cursor: "pointer", fontSize: 18, color: C.text, fontWeight: 600 }}>+</button>
+                      </div>
+                      <div style={{ fontSize: 12, color: C.muted }}>最多 40 組</div>
+                    </div>
+
+                    {p.error && <div style={{ color: "#E11D48", fontSize: 12, background: "#FFF1F2", padding: "8px 12px", borderRadius: 7, marginBottom: 10 }}>{p.error}</div>}
 
                     <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <Btn onClick={function () { expandProduct(idx); }} disabled={p.generating} color={p.done ? "green" : "orange"} style={{ fontSize: 13, padding: "8px 20px" }}>
-                        {p.generating ? ("⏳ " + loadingSecs + "s…（約需 30-60 秒）") : p.done ? "🔄 重新生成" : "⚡ AI 擴品"}
+                      <Btn onClick={function () { expandProduct(idx); }}
+                        disabled={p.generating || ((p.dim1||[]).length === 0 && (p.dim2||[]).length === 0 && (p.dim3||[]).length === 0)}
+                        color={p.done ? "green" : "orange"} style={{ fontSize: 13, padding: "10px 24px" }}>
+                        {p.generating ? ("⏳ " + loadingSecs + "s…（約需 30-60 秒）") : p.done ? "🔄 重新生成" : "⚡ AI 擴品 " + (p.count || 20) + " 組"}
                       </Btn>
                     </div>
                   </div>
