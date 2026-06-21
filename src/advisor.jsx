@@ -255,8 +255,8 @@ export default function Advisor() {
       "  title_zh: 中文標題\n",
       "  keywords_en: 5個英文關鍵詞（逗號分隔）\n",
       "  keywords_zh: 5個中文關鍵詞（頓號分隔）\n",
-      "  attributes: 陣列，5個B2B買家重視的產品屬性，格式 [{\"name\":\"屬性名（英文）\",\"value\":\"屬性值（英文）\"}]\n",
-      "  image_prompt: 圖片生成提示詞（英文，適合 Midjourney，描述產品主視覺，40字以內）\n\n",
+      "  attributes: 陣列，3個B2B買家最重視的產品屬性，格式 [{\"name\":\"屬性名（英文）\",\"value\":\"屬性值（英文）\"}]\n",
+      "  image_prompt: 圖片生成提示詞（英文，適合 Midjourney，20字以內）\n\n",
       "只回傳JSON陣列，不要其他文字：\n",
       '[{"title_en":"","title_zh":"","keywords_en":"","keywords_zh":"","attributes":[{"name":"","value":""}],"image_prompt":""}]'
     ].join("");
@@ -712,7 +712,7 @@ export default function Advisor() {
                       <Btn onClick={function () { expandProduct(idx); }}
                         disabled={p.generating || ((p.dim1||[]).length === 0 && (p.dim2||[]).length === 0 && (p.dim3||[]).length === 0)}
                         color={p.done ? "ghost" : "orange"} style={{ fontSize: 13, padding: "10px 24px" }}>
-                        {p.generating ? ("⏳ " + loadingSecs + "s…（約需 30-60 秒）") : p.done ? "🔄 重新生成" : "⚡ AI 擴品 " + (p.count || 20) + " 組"}
+                        {p.generating ? ("⏳ " + loadingSecs + "s…（約需 60-120 秒）") : p.done ? "🔄 重新生成" : "⚡ AI 擴品 " + (p.count || 20) + " 組"}
                       </Btn>
                     </div>
 
