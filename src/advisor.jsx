@@ -122,13 +122,15 @@ export default function Advisor() {
 
   const [exportMsg, setExportMsg] = useState("");
 
-  // 計時器
+  // 計時器：監聽全域 loading（分析中）或任一產品 generating（擴品中）
+  var anyGenerating = products.some(function (p) { return p.generating; });
+  var anyBusy = loading || anyGenerating;
   useEffect(function () {
-    if (!loading) { setLoadingSecs(0); return; }
+    if (!anyBusy) { setLoadingSecs(0); return; }
     setLoadingSecs(0);
     var t = setInterval(function () { setLoadingSecs(function (s) { return s + 1; }); }, 1000);
     return function () { clearInterval(t); };
-  }, [loading]);
+  }, [anyBusy]);
 
   function handlePdf(e) {
     var f = e.target.files[0];
