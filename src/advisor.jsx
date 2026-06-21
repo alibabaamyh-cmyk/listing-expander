@@ -256,7 +256,8 @@ export default function Advisor() {
       "  keywords_en: 5個英文關鍵詞（逗號分隔）\n",
       "  keywords_zh: 5個中文關鍵詞（頓號分隔）\n",
       "  attributes: 陣列，3個B2B買家最重視的產品屬性，格式 [{\"name\":\"屬性名（英文）\",\"value\":\"屬性值（英文）\"}]\n",
-      "  image_prompt: 圖片生成提示詞（英文，適合 Midjourney，20字以內）\n\n",
+      "  image_prompt: 生圖提示詞，固定格式如下（直接填入，不要加其他說明）：\n",
+      "    'Professional product photography of [根據本組標題填入具體產品名稱與核心規格], clean white background, studio lighting, sharp focus, high detail, e-commerce style, 900x900px square'\n\n",
       "只回傳JSON陣列，不要其他文字：\n",
       '[{"title_en":"","title_zh":"","keywords_en":"","keywords_zh":"","attributes":[{"name":"","value":""}],"image_prompt":""}]'
     ].join("");
