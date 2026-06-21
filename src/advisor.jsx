@@ -732,64 +732,72 @@ export default function Advisor() {
                           </div>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                           {p.listings.map(function (l, li) {
                             var attrs = l.attributes || [];
                             return (
                               <div key={li}
                                 onClick={function () { toggleSelect(idx, li); }}
-                                style={{ border: "2px solid " + (l.selected ? C.orange : C.border), borderRadius: 12, padding: 14, background: l.selected ? "#FFFBF7" : "#FAFAFA", cursor: "pointer", transition: "all 0.12s", userSelect: "none" }}>
+                                style={{ border: "2px solid " + (l.selected ? C.orange : C.border), borderRadius: 12, padding: "14px 18px", background: l.selected ? "#FFFBF7" : "#FAFAFA", cursor: "pointer", transition: "all 0.12s", userSelect: "none", display: "flex", gap: 16, alignItems: "flex-start" }}>
 
-                                {/* 頂部：勾選 + 序號 */}
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <div style={{ width: 18, height: 18, borderRadius: 5, border: "2px solid " + (l.selected ? C.orange : "#D1D5DB"), background: l.selected ? C.orange : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                      {l.selected && <span style={{ color: "#fff", fontSize: 11, fontWeight: 800 }}>✓</span>}
+                                {/* 左：勾選框 */}
+                                <div style={{ flexShrink: 0, paddingTop: 2 }}>
+                                  <div style={{ width: 20, height: 20, borderRadius: 6, border: "2px solid " + (l.selected ? C.orange : "#D1D5DB"), background: l.selected ? C.orange : "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    {l.selected && <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>}
+                                  </div>
+                                </div>
+
+                                {/* 右：內容，橫向分區 */}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
+                                    <span style={{ fontSize: 11, color: C.muted }}>#{li + 1}</span>
+                                    <span style={{ fontSize: 11, color: l.selected ? C.orange : C.muted, fontWeight: l.selected ? 700 : 400 }}>{l.selected ? "已加入清單" : "加入匯入清單"}</span>
+                                  </div>
+
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                                    {/* 標題區 */}
+                                    <div>
+                                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>標題</div>
+                                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.5, marginBottom: 4 }}>{l.title_en}</div>
+                                      <div style={{ fontSize: 12, color: C.muted }}>{l.title_zh}</div>
                                     </div>
-                                    <span style={{ fontSize: 11, color: l.selected ? C.orange : C.muted, fontWeight: l.selected ? 700 : 400 }}>
-                                      {l.selected ? "已加入清單" : "加入匯入清單"}
-                                    </span>
-                                  </div>
-                                  <span style={{ fontSize: 11, color: C.muted }}>#{li + 1}</span>
-                                </div>
 
-                                {/* 標題 */}
-                                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.5, marginBottom: 4 }}>{l.title_en}</div>
-                                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>{l.title_zh}</div>
+                                    {/* 關鍵詞 + 屬性 */}
+                                    <div>
+                                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>🔑 關鍵詞</div>
+                                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
+                                        {(l.keywords_en || "").split(",").map(function (k, ki) {
+                                          return k.trim() ? <span key={ki} style={{ fontSize: 10, padding: "2px 7px", background: "#EEF2FF", color: "#4F46E5", borderRadius: 4 }}>{k.trim()}</span> : null;
+                                        })}
+                                      </div>
+                                      {attrs.length > 0 && (
+                                        <div>
+                                          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>📋 屬性</div>
+                                          {attrs.map(function (a, ai) {
+                                            return (
+                                              <div key={ai} style={{ display: "flex", gap: 6, fontSize: 11, marginBottom: 2 }}>
+                                                <span style={{ color: C.muted, flexShrink: 0 }}>{a.name}:</span>
+                                                <span style={{ color: C.text, fontWeight: 500 }}>{a.value}</span>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
 
-                                {/* 關鍵詞 */}
-                                <div style={{ marginBottom: 10 }}>
-                                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>🔑 關鍵詞</div>
-                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                    {(l.keywords_en || "").split(",").map(function (k, ki) {
-                                      return k.trim() ? <span key={ki} style={{ fontSize: 10, padding: "2px 7px", background: "#EEF2FF", color: "#4F46E5", borderRadius: 4 }}>{k.trim()}</span> : null;
-                                    })}
-                                  </div>
-                                </div>
-
-                                {/* 屬性 */}
-                                {attrs.length > 0 && (
-                                  <div style={{ marginBottom: 10 }}>
-                                    <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>📋 屬性</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                                      {attrs.map(function (a, ai) {
-                                        return (
-                                          <div key={ai} style={{ display: "flex", gap: 6, fontSize: 11 }}>
-                                            <span style={{ color: C.muted, flexShrink: 0, minWidth: 80 }}>{a.name}</span>
-                                            <span style={{ color: C.text, fontWeight: 500 }}>{a.value}</span>
+                                    {/* 圖片 Prompt */}
+                                    <div>
+                                      {l.image_prompt && (
+                                        <>
+                                          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>🎨 圖片 Prompt</div>
+                                          <div style={{ background: "#FAF5FF", border: "1px solid #E9D5FF", borderRadius: 7, padding: "6px 10px", fontSize: 11, color: "#7C3AED", lineHeight: 1.6 }}>
+                                            {l.image_prompt}
                                           </div>
-                                        );
-                                      })}
+                                        </>
+                                      )}
                                     </div>
                                   </div>
-                                )}
-
-                                {/* 圖片 Prompt */}
-                                {l.image_prompt && (
-                                  <div style={{ background: "#FAF5FF", border: "1px solid #E9D5FF", borderRadius: 7, padding: "6px 10px", fontSize: 11, color: "#7C3AED" }}>
-                                    🎨 {l.image_prompt}
-                                  </div>
-                                )}
+                                </div>
                               </div>
                             );
                           })}
