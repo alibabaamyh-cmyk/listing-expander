@@ -184,6 +184,8 @@ export default function Advisor() {
           dim1: result.dim1Examples ? [...result.dim1Examples] : [],
           dim2: result.dim2Examples ? [...result.dim2Examples] : [],
           dim3: result.dim3Examples ? [...result.dim3Examples] : [],
+          dim1Extra: [], dim2Extra: [], dim3Extra: [],
+          dim1Input: "", dim2Input: "", dim3Input: "",
           count: 20,
           listings: [], generating: false, done: false, error: ""
         };
@@ -257,6 +259,41 @@ export default function Advisor() {
   function updateCount(idx, val) {
     var v = Math.min(40, Math.max(10, parseInt(val) || 10));
     setProducts(function (prev) { var n = [...prev]; n[idx] = { ...n[idx], count: v }; return n; });
+  }
+
+  function addCustomOption(idx, field) {
+    var inputField = field + "Input";
+    var extraField = field + "Extra";
+    setProducts(function (prev) {
+      var n = [...prev];
+      var p = n[idx];
+      var val = (p[inputField] || "").trim();
+      if (!val) return n;
+      var extras = p[extraField] || [];
+      var allOpts = [...(strategy[field + "Examples"] || []), ...extras];
+      if (allOpts.includes(val)) {
+        // 已存在，只清空輸入框
+        n[idx] = { ...p, [inputField]: "" };
+        return n;
+      }
+      var selected = p[field] || [];
+      n[idx] = { ...p, [extraField]: [...extras, val], [field]: [...selected, val], [inputField]: "" };
+      return n;
+    });
+  }
+
+  function removeCustomOption(idx, field, val) {
+    var extraField = field + "Extra";
+    setProducts(function (prev) {
+      var n = [...prev];
+      var p = n[idx];
+      n[idx] = {
+        ...p,
+        [extraField]: (p[extraField] || []).filter(function (x) { return x !== val; }),
+        [field]: (p[field] || []).filter(function (x) { return x !== val; })
+      };
+      return n;
+    });
   }
 
   function exportAllToExcel() {
@@ -514,19 +551,25 @@ export default function Advisor() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 18 }}>
                       {dims.map(function (d) {
                         var selected = p[d.field] || [];
+                        var extras = p[d.field + "Extra"] || [];
+                        var inputVal = p[d.field + "Input"] || "";
+                        var allOpts = d.opts; // AI 建議的
+                        var allSelected = [...allOpts, ...extras]; // 全部可選
                         return (
                           <div key={d.field} style={{ background: d.bg, borderRadius: 10, padding: 14 }}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                               <div style={{ fontWeight: 700, fontSize: 13, color: d.color }}>{d.label}</div>
                               <div style={{ display: "flex", gap: 8 }}>
-                                <span onClick={function () { setProducts(function (prev) { var n=[...prev]; n[idx]={...n[idx],[d.field]:[...d.opts]}; return n; }); }}
+                                <span onClick={function () { setProducts(function (prev) { var n=[...prev]; n[idx]={...n[idx],[d.field]:[...allSelected]}; return n; }); }}
                                   style={{ fontSize: 11, color: d.color, cursor: "pointer", textDecoration: "underline" }}>全選</span>
                                 <span onClick={function () { setProducts(function (prev) { var n=[...prev]; n[idx]={...n[idx],[d.field]:[]}; return n; }); }}
                                   style={{ fontSize: 11, color: C.muted, cursor: "pointer", textDecoration: "underline" }}>清除</span>
                               </div>
                             </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                              {d.opts.map(function (opt, oi) {
+
+                            {/* AI 建議選項 */}
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: extras.length ? 8 : 0 }}>
+                              {allOpts.map(function (opt, oi) {
                                 var isChecked = selected.includes(opt);
                                 return (
                                   <div key={oi} onClick={function () { toggleDim(idx, d.field, opt); }}
@@ -539,7 +582,49 @@ export default function Advisor() {
                                 );
                               })}
                             </div>
-                            <div style={{ marginTop: 8, fontSize: 11, color: d.color }}>已選 {selected.length} 項</div>
+
+                            {/* 自訂選項 */}
+                            {extras.length > 0 && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8, paddingTop: 8, borderTop: "1px dashed " + d.color + "44" }}>
+                                {extras.map(function (opt, oi) {
+                                  var isChecked = selected.includes(opt);
+                                  return (
+                                    <div key={oi}
+                                      style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 8, border: "1.5px dashed " + (isChecked ? d.color : d.color + "66"), background: isChecked ? d.color : "#fff", userSelect: "none" }}>
+                                      <div onClick={function () { toggleDim(idx, d.field, opt); }}
+                                        style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                                        <div style={{ width: 14, height: 14, borderRadius: 3, border: "2px solid " + (isChecked ? "#fff" : d.color + "88"), background: isChecked ? "#fff" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                          {isChecked && <div style={{ width: 7, height: 7, background: d.color, borderRadius: 1 }} />}
+                                        </div>
+                                        <span style={{ fontSize: 12, color: isChecked ? "#fff" : C.text, fontWeight: isChecked ? 600 : 400 }}>{opt}</span>
+                                      </div>
+                                      <span onClick={function () { removeCustomOption(idx, d.field, opt); }}
+                                        style={{ fontSize: 13, color: isChecked ? "#ffffffaa" : d.color + "88", cursor: "pointer", lineHeight: 1, marginLeft: 2 }}>✕</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* 新增自訂選項 */}
+                            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                              <input
+                                value={inputVal}
+                                onChange={function (e) {
+                                  var v = e.target.value;
+                                  setProducts(function (prev) { var n=[...prev]; n[idx]={...n[idx],[d.field+"Input"]:v}; return n; });
+                                }}
+                                onKeyDown={function (e) { if (e.key === "Enter") addCustomOption(idx, d.field); }}
+                                placeholder="自行新增維度選項…"
+                                style={{ flex: 1, padding: "7px 11px", borderRadius: 7, border: "1.5px dashed " + d.color + "66", fontSize: 12, outline: "none", background: "#fff", color: C.text, fontFamily: "inherit" }}
+                              />
+                              <button onClick={function () { addCustomOption(idx, d.field); }}
+                                style={{ padding: "7px 14px", borderRadius: 7, border: "1.5px solid " + d.color, background: "transparent", color: d.color, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                + 新增
+                              </button>
+                            </div>
+
+                            <div style={{ marginTop: 8, fontSize: 11, color: d.color }}>已選 {selected.length} 項{extras.length > 0 ? "（含 " + extras.length + " 個自訂）" : ""}</div>
                           </div>
                         );
                       })}
