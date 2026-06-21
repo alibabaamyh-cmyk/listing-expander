@@ -24,6 +24,7 @@ async function callLLM(prompt, fileBase64, fileMime, maxTokens) {
   var start = fb === -1 ? fbr : fbr === -1 ? fb : Math.min(fb, fbr);
   if (start > 0) clean = clean.slice(start);
   try { JSON.parse(clean); return clean; } catch (_) {}
+  // 修復陣列截斷：找到最後一個完整的頂層物件
   if (clean.startsWith("[")) {
     var depth = 0, inStr = false, esc = false, lastEnd = -1;
     for (var i = 0; i < clean.length; i++) {
@@ -36,6 +37,28 @@ async function callLLM(prompt, fileBase64, fileMime, maxTokens) {
       if (c === "}" || c === "]") { depth--; if (depth === 1 && c === "}") lastEnd = i; }
     }
     return lastEnd > 0 ? clean.slice(0, lastEnd + 1) + "]" : "[]";
+  }
+  // 修復物件截斷：嘗試補上結尾
+  if (clean.startsWith("{")) {
+    var suffixes = ['"]}', '"}}', '"]}}}', '"}', '}}', '}'];
+    for (var si = 0; si < suffixes.length; si++) {
+      try { JSON.parse(clean + suffixes[si]); return clean + suffixes[si]; } catch (_) {}
+    }
+    // 找最後一個完整的 key:value 對，截斷後補 }
+    var depth2 = 0, inStr2 = false, esc2 = false, lastComma = -1;
+    for (var j = 0; j < clean.length; j++) {
+      var ch = clean[j];
+      if (esc2) { esc2 = false; continue; }
+      if (ch === "\\" && inStr2) { esc2 = true; continue; }
+      if (ch === '"') { inStr2 = !inStr2; continue; }
+      if (inStr2) continue;
+      if (ch === "{" || ch === "[") depth2++;
+      if (ch === "}" || ch === "]") depth2--;
+      if (ch === "," && depth2 === 1) lastComma = j;
+    }
+    if (lastComma > 0) {
+      try { JSON.parse(clean.slice(0, lastComma) + "}"); return clean.slice(0, lastComma) + "}"; } catch (_) {}
+    }
   }
   return clean;
 }
@@ -174,7 +197,7 @@ export default function Advisor() {
       '"dim3Label":"維度3名稱","dim3Examples":["具體範例1","具體範例2","具體範例3","具體範例4","具體範例5"]}';
 
     try {
-      var raw = await callLLM(prompt, pdfBase64, pdfBase64 ? "application/pdf" : null, 3000);
+      var raw = await callLLM(prompt, pdfBase64, pdfBase64 ? "application/pdf" : null, 6000);
       var result = JSON.parse(raw);
       setStrategy(result);
       // 預設全選所有維度選項
