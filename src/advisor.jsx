@@ -161,7 +161,7 @@ export default function Advisor() {
       '{"path":"many或few","summary":"2句話說明現況與建議方向（繁體中文）","hasWebsite":true或false,"hasCatalog":true或false}';
 
     try {
-      var raw = await callLLM(prompt, pdfBase64, pdfBase64 ? "application/pdf" : null, 2000);
+      var raw = await callLLM(prompt, pdfBase64, pdfBase64 ? "application/pdf" : null, 2000, true);
       var result = JSON.parse(raw);
       setPathResult(result);
       if (result.path === "many") {
@@ -199,7 +199,7 @@ export default function Advisor() {
       '"dim3Label":"維度3名稱","dim3Examples":["具體範例1","具體範例2","具體範例3","具體範例4","具體範例5"]}';
 
     try {
-      var raw = await callLLM(prompt, pdfBase64, pdfBase64 ? "application/pdf" : null, 6000);
+      var raw = await callLLM(prompt, pdfBase64, pdfBase64 ? "application/pdf" : null, 6000, true);
       var result = JSON.parse(raw);
       setStrategy(result);
       // 預設全選所有維度選項
