@@ -173,6 +173,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .other-input { display: none; margin-top: 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 14px; width: 100%; outline: none; color: #1e293b; transition: border-color 0.15s; }
 .other-input:focus { border-color: #ff6b35; }
 .other-input.visible { display: block; }
+
+/* ─── 拓品維度參考卡片 ─── */
+.dim-ref-box { background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); border: 1.5px solid #bae6fd; border-radius: 12px; padding: 18px 20px; margin-top: 12px; }
+.dim-ref-title { font-size: 14px; font-weight: 800; color: #0369a1; margin-bottom: 14px; }
+.dim-ref-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.dim-ref-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #334155; line-height: 1.5; }
+.dim-ref-num { background: #0284c7; color: #fff; border-radius: 50%; min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; margin-top: 1px; }
+.dim-ref-ex-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.dim-ref-examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.dim-ref-tag { font-size: 12px; color: #0369a1; background: rgba(255,255,255,0.75); border: 1px solid #bae6fd; border-radius: 6px; padding: 4px 10px; line-height: 1.5; }
+.dim-fill-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; margin-top: 12px; }
+.dim-fill-title { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+.dim-fill-hint { font-size: 12px; color: #94a3b8; margin-bottom: 14px; }
 </style>
 </head>
 <body>
@@ -396,6 +409,68 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
     <div class="field" style="margin-top:14px">
       <label>目標市場</label>
       <input id="targetMarket" placeholder="例：北美、歐洲、東南亞 / North America, Europe" />
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 拓品方向引導 ── -->
+    <div class="sec-label">拓品維度參考</div>
+    <p style="font-size:13px;color:#64748b;margin-top:6px;line-height:1.6">選擇你的產業，查看常見的拓品維度與標題範例，再到下方填入你的具體方向。填越詳細，AI 拓出的 listing 越精準。</p>
+
+    <div class="field" style="margin-top:14px">
+      <label>產業類型（選填，選擇後顯示參考維度）</label>
+      <select id="industryType" onchange="renderDimensions()">
+        <option value="">-- 選擇產業 --</option>
+        <option value="美妝保養">美妝保養</option>
+        <option value="紡織服裝">紡織服裝</option>
+        <option value="電子零件">電子零件</option>
+        <option value="機械設備">機械設備</option>
+        <option value="食品農產">食品農產</option>
+        <option value="家居用品">家居用品</option>
+        <option value="客製加工">客製加工（CNC / 鑄造 / 沖壓）</option>
+        <option value="健康保健">健康保健</option>
+      </select>
+    </div>
+
+    <div id="dimensionCard" style="display:none"></div>
+
+    <div class="dim-fill-box" style="margin-top:16px">
+      <div class="dim-fill-title">填寫你的拓品方向（AI 參考用）</div>
+      <div class="dim-fill-hint">對照上方維度參考，把你的產品具體情況填進來</div>
+
+      <div class="field">
+        <label>主要應用場景或行業用途</label>
+        <textarea id="appScenes" rows="2" placeholder="例：工業廢水處理、家用飲用水淨化、空氣清淨機過濾、餐飲業脫色..."></textarea>
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label>規格 / 功效 / 材質的差異化重點</label>
+        <textarea id="specDiff" rows="2" placeholder="例：不同碘值（800/1000/1200）、不同粒徑（4×8 目/8×30 目）、木質/椰殼/煤質；或不同濃度、成分..."></textarea>
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label>目標買家類型（可多選）</label>
+        <div class="check-group">
+          <label class="check-item"><input type="checkbox" name="buyerType" value="批發商/進口商"> 批發商 / 進口商</label>
+          <label class="check-item"><input type="checkbox" name="buyerType" value="品牌商/OEM貼牌"> 品牌商 / OEM 貼牌</label>
+          <label class="check-item"><input type="checkbox" name="buyerType" value="工廠/製造業"> 工廠 / 製造業</label>
+          <label class="check-item"><input type="checkbox" name="buyerType" value="零售商/電商賣家"> 零售商 / 電商賣家</label>
+          <label class="check-item"><input type="checkbox" name="buyerType" value="設計師/工作室"> 設計師 / 工作室</label>
+          <label class="check-item"><input type="checkbox" name="buyerType" value="工程公司/承包商"> 工程公司 / 承包商</label>
+          <label class="check-item"><input type="checkbox" name="buyerType" value="其它" onchange="toggleOther('buyerType','buyerTypeOther')"> 其它</label>
+        </div>
+        <input id="buyerTypeOther" class="other-input" placeholder="請填寫其它買家類型" />
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label>特殊認證或出口市場要求</label>
+        <input id="certNeeds" placeholder="例：NSF（美國飲水認證）、FDA、清真 Halal、有機、CE、REACH..." />
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label>其它拓品角度（選填）</label>
+        <textarea id="otherAngles" rows="2" placeholder="例：小批量打樣低門檻、不同 MOQ 梯度吸引不同規模買家、快速交期、OEM/ODM 定制服務..."></textarea>
+      </div>
     </div>
 
     <hr class="divider">
@@ -933,6 +1008,64 @@ function getRadio(name) {
 }
 function syncIdentity() {}
 
+// ══════════════════════════════════════════════════════
+// 產業拓品維度資料庫
+// ══════════════════════════════════════════════════════
+var INDUSTRY_DIMS = {
+  "美妝保養": {
+    dims: ["成分與功效（保濕 / 美白 / 抗老 / 修復 / 控油）","適用膚質與族群（乾性 / 油性 / 敏感肌 / 男性 / 孕婦）","產品形態（精華液 / 乳霜 / 面膜 / 安瓶 / 凍乾粉 / 潔顏）","認證標準（有機 / 天然 / FDA / EWG / 清真 / COSMOS）","使用場景（日常護膚 / 醫美後修復 / 旅行裝 / 季節保養）"],
+    examples: ["玻尿酸保濕精華｜乾燥肌高效補水夜間修護","有機玫瑰潤膚霜｜天然成分歐洲 COSMOS 認證","VC 美白精華液｜暗沉肌淡斑亮白配方"]
+  },
+  "紡織服裝": {
+    dims: ["材質與功能性（棉 / 麻 / 滌綸 / 竹纖維 / 防水 / 透氣 / 抗菌）","客製化程度（空白款 / 印花 / 刺繡 / 熱轉印 / OEM 打版）","適用場景與季節（戶外 / 運動 / 居家 / 正裝 / 校服 / 工作服）","買家類型（品牌商 / 零售商 / 設計師 / 平台賣家 / 批發商）","MOQ 梯度（小單快反 / 中量批發 / 大量 OEM / 無起訂量）"],
+    examples: ["有機棉空白T恤｜品牌商客製印花首選","防曬防UV功能外套｜戶外品牌批發","小單快反棉麻寬褲｜歐洲設計師款"]
+  },
+  "電子零件": {
+    dims: ["規格型號（電壓 / 電流 / 功率 / 頻率 / 尺寸）","應用場景（消費電子 / 工業設備 / 汽車 / 醫療 / 智慧家居）","認證（CE / FCC / RoHS / UL / REACH / KC）","封裝形式與批量（SMD / DIP / 散裝 / 托盤 / 捲帶）","技術特性（精度等級 / 工作溫度 / 防護等級 IP / 使用壽命）"],
+    examples: ["12V DC 無刷馬達｜工業自動化設備精密驅動","RoHS 認證 LED 驅動模組｜歐盟合規照明方案","小批量打樣 IC 模組｜新品研發快速驗證"]
+  },
+  "機械設備": {
+    dims: ["機台規格（功率 / 產能 / 加工精度 / 工作台尺寸）","應用行業（食品 / 包裝 / 皮革 / 木工 / 金屬加工 / 醫療）","自動化程度（手動 / 半自動 / 全自動 / 智能聯網 / 機械手）","認證（CE / ISO 9001 / SGS / 電氣安全 / 壓力容器）","售後服務（現場安裝調試 / 遠程培訓 / 保固配件 / 備品支援）"],
+    examples: ["全自動食品包裝機｜中小型食品廠首選方案","CE 認證液壓裁斷機｜皮革製鞋精準切割","低門檻試樣設備｜新工廠設備快速導入"]
+  },
+  "食品農產": {
+    dims: ["等級品種（特級 / A 級 / 有機 / 非基改 / 地理標誌）","認證（有機 / 清真 Halal / FDA / ISO 22000 / BSCI / HACCP）","包裝規格（散裝 / 真空零售包 / 貼牌 OEM / 禮盒裝）","用途（食品加工原料 / 零售終端 / 餐飲供應 / 原物料出口）","產地溯源（產地認證 / 可追溯碼 / 農場直供）"],
+    examples: ["有機冷壓初榨橄欖油｜清真認證中東市場","食品級蛋白粉散裝供應｜健身品牌貼牌首選","真空鎖鮮精選茶葉｜歐美精品茶市場"]
+  },
+  "家居用品": {
+    dims: ["材質（竹木 / 金屬 / 陶瓷 / 玻璃 / 矽膠 / 環保再生材料）","設計風格（北歐 / 現代簡約 / 工業風 / 日式無印 / 鄉村風）","使用空間（廚房 / 臥室 / 浴室 / 辦公室 / 戶外庭院）","功能特性（收納 / 節能 / 多功能 / 智能聯網 / 折疊攜帶）","認證（FSC / REACH / ASTM / EN 71 兒童安全 / FDA 食品接觸）"],
+    examples: ["竹製廚房收納組｜北歐風格 FSC 認證環保","工業風鐵架層板｜咖啡廳商業空間佈置","戶外防水折疊椅桌組｜露營品牌 OEM 批發"]
+  },
+  "客製加工": {
+    dims: ["材質（不鏽鋼 / 鋁合金 / 鈦合金 / 工程塑膠 / 複合材料）","加工工藝（CNC 精密加工 / 鑄造 / 沖壓 / 鍛造 / 焊接 / 3D 列印）","精度等級（公差 ±0.01mm / ±0.05mm / 一般公差 / 鏡面拋光）","行業應用（航空 / 汽車零件 / 醫療器材 / 半導體設備 / 軍工）","MOQ 彈性（打樣免模費 / 小批量 / 大批量優惠 / 快速交期）"],
+    examples: ["航空鋁合金 CNC 精密件｜無人機外殼輕量化方案","醫療級不鏽鋼精密沖壓件｜ISO 13485 認證供應","小批量打樣免開模費｜新品快速驗證低門檻"]
+  },
+  "健康保健": {
+    dims: ["成分原料（植物萃取 / 礦物質 / 益生菌 / 膠原蛋白 / 維生素）","功效訴求（免疫調節 / 改善睡眠 / 消化健康 / 運動恢復 / 美容養顏）","產品形態（硬膠囊 / 軟膠囊 / 錠劑 / 沖泡粉末 / 液態飲品）","認證（GMP / FDA / 有機 / NSF / 非基改 / 素食 Vegan）","目標族群（中老年 / 運動員 / 上班族 / 女性保養 / 兒童 / 孕婦）"],
+    examples: ["GMP 認證益生菌膠囊｜腸胃調理每日保健","植物萃取薑黃素軟膠囊｜抗發炎運動恢復","無糖膠原蛋白粉｜女性美容保養首選配方"]
+  }
+};
+
+function renderDimensions() {
+  var industry = document.getElementById("industryType").value;
+  var card = document.getElementById("dimensionCard");
+  if (!industry || !INDUSTRY_DIMS[industry]) { card.style.display = "none"; return; }
+  var d = INDUSTRY_DIMS[industry];
+  var html = '<div class="dim-ref-box">'
+    + '<div class="dim-ref-title">🎯 ' + industry + ' — 常見拓品維度</div>'
+    + '<div class="dim-ref-list">';
+  d.dims.forEach(function(dim, i) {
+    html += '<div class="dim-ref-item"><span class="dim-ref-num">' + (i+1) + '</span>' + dim + '</div>';
+  });
+  html += '</div><div class="dim-ref-ex-label">參考拓品標題範例</div><div class="dim-ref-examples">';
+  d.examples.forEach(function(ex) {
+    html += '<div class="dim-ref-tag">' + ex + '</div>';
+  });
+  html += '</div></div>';
+  card.innerHTML = html;
+  card.style.display = "block";
+}
+
 // ── 其它展開 ──
 function toggleOther(name, inputId) {
   var hasOther = Array.from(document.querySelectorAll('input[name="' + name + '"]:checked'))
@@ -1171,8 +1304,14 @@ function generateAttrPrompt() {
   }
   hideMsg("step2Msg");
 
-  var features = v("productFeatures");
-  var market   = v("targetMarket");
+  var features    = v("productFeatures");
+  var market      = v("targetMarket");
+  var industry    = (document.getElementById("industryType") || {}).value || "";
+  var appScenes   = v("appScenes");
+  var specDiff    = v("specDiff");
+  var buyerTypes  = getCheckedWithOther("buyerType", "buyerTypeOther");
+  var certNeeds   = v("certNeeds");
+  var otherAngles = v("otherAngles");
 
   var prompt =
 "# Product Listing Attribute Research\n\n" +
@@ -1180,8 +1319,14 @@ function generateAttrPrompt() {
 "## Product Information\n" +
 "- **Product name**: " + name + "\n" +
 "- **Description**: " + desc + "\n" +
-(features ? "- **Key features**: " + features + "\n" : "") +
-(market   ? "- **Target market**: " + market + "\n"  : "") +
+(features    ? "- **Key features**: " + features + "\n" : "") +
+(market      ? "- **Target market**: " + market + "\n" : "") +
+(industry    ? "- **Industry category**: " + industry + "\n" : "") +
+(appScenes   ? "- **Application scenes / industry uses**: " + appScenes + "\n" : "") +
+(specDiff    ? "- **Key spec / formula / material differentiators**: " + specDiff + "\n" : "") +
+(buyerTypes  ? "- **Target buyer types**: " + buyerTypes + "\n" : "") +
+(certNeeds   ? "- **Certification / compliance requirements**: " + certNeeds + "\n" : "") +
+(otherAngles ? "- **Other expansion angles**: " + otherAngles + "\n" : "") +
 "\n" +
 "## Your Task\n" +
 "Suggest exactly **5 product attributes** that can be used to create differentiated Alibaba.com B2B listings for this product.\n" +
@@ -1399,10 +1544,16 @@ function generateExpansionPrompt() {
   var count = parseInt(v("listingCount")) || 10;
   count = Math.min(Math.max(count, 1), 30);
 
-  var productName = v("productName") || "(產品名稱)";
-  var productDesc = v("productDesc") || "";
-  var features    = v("productFeatures") || "";
-  var market      = v("targetMarket") || "";
+  var productName  = v("productName") || "(產品名稱)";
+  var productDesc  = v("productDesc") || "";
+  var features     = v("productFeatures") || "";
+  var market       = v("targetMarket") || "";
+  var industry2    = (document.getElementById("industryType") || {}).value || "";
+  var appScenes2   = v("appScenes");
+  var specDiff2    = v("specDiff");
+  var buyerTypes2  = getCheckedWithOther("buyerType", "buyerTypeOther");
+  var certNeeds2   = v("certNeeds");
+  var otherAngles2 = v("otherAngles");
 
   hideMsg("step3Msg");
 
@@ -1411,9 +1562,15 @@ function generateExpansionPrompt() {
 "Note: The seller information below may be written in Chinese or English. Please read and understand it, then output everything in English.\n\n" +
 "## Product Information\n" +
 "- **Product**: " + productName + "\n" +
-(productDesc ? "- **Description**: " + productDesc + "\n" : "") +
-(features    ? "- **Features**: " + features + "\n" : "") +
-(market      ? "- **Target markets**: " + market + "\n" : "") +
+(productDesc  ? "- **Description**: " + productDesc + "\n" : "") +
+(features     ? "- **Features**: " + features + "\n" : "") +
+(market       ? "- **Target markets**: " + market + "\n" : "") +
+(industry2    ? "- **Industry category**: " + industry2 + "\n" : "") +
+(appScenes2   ? "- **Application scenes**: " + appScenes2 + "\n" : "") +
+(specDiff2    ? "- **Key differentiators**: " + specDiff2 + "\n" : "") +
+(buyerTypes2  ? "- **Target buyer types**: " + buyerTypes2 + "\n" : "") +
+(certNeeds2   ? "- **Certifications needed**: " + certNeeds2 + "\n" : "") +
+(otherAngles2 ? "- **Other expansion angles**: " + otherAngles2 + "\n" : "") +
 "\n" +
 "## Available Attributes\n" +
 attrLines.map(function(l){ return "- " + l; }).join("\n") + "\n\n" +
