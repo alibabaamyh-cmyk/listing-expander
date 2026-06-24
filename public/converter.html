@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阿里巴巴商家旺舖暨商品資料整理工具</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f4f8; color: #1e293b; min-height: 100vh; }
+
+/* ─── Header ─── */
+.header { background: #1B2A4A; color: #fff; padding: 18px 32px; }
+.header h1 { font-size: 20px; font-weight: 800; }
+.header p { font-size: 13px; color: #94a3b8; margin-top: 3px; }
+
+/* ─── Progress bar ─── */
+.progress { display: flex; background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 24px; overflow-x: auto; }
+.prog-item { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.prog-item.active { border-bottom-color: #ff6b35; }
+.prog-item.done { border-bottom-color: #16a34a; }
+.prog-num { width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; color: #64748b; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.prog-item.active .prog-num { background: #ff6b35; color: #fff; }
+.prog-item.done .prog-num { background: #16a34a; color: #fff; }
+.prog-label { font-size: 13px; font-weight: 600; color: #94a3b8; }
+.prog-item.active .prog-label { color: #ff6b35; }
+.prog-item.done .prog-label { color: #16a34a; }
+.prog-arrow { color: #cbd5e1; font-size: 16px; align-self: center; }
+
+/* ─── Container ─── */
+.container { max-width: 800px; margin: 0 auto; padding: 28px 20px 80px; }
+
+/* ─── Step card ─── */
+.step-card { background: #fff; border-radius: 16px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 8px rgba(0,0,0,0.07); display: none; }
+.step-card.visible { display: block; }
+.step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.step-icon { width: 36px; height: 36px; border-radius: 10px; background: #ff6b35; color: #fff; font-size: 16px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-title { font-size: 18px; font-weight: 800; color: #1e293b; }
+.step-sub { font-size: 13px; color: #64748b; margin-bottom: 24px; margin-left: 48px; line-height: 1.6; }
+
+/* ─── Section label ─── */
+.sec-label { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin: 22px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+
+/* ─── Form fields ─── */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; font-weight: 700; color: #475569; }
+.field .hint { font-size: 11px; color: #94a3b8; }
+.field input, .field select, .field textarea {
+  padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-family: inherit; color: #1e293b; outline: none;
+  transition: border-color 0.15s; background: #fff;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #ff6b35; }
+.field textarea { resize: vertical; line-height: 1.6; }
+.required-star { color: #ef4444; }
+
+/* ─── Prompt output box ─── */
+.prompt-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px; display: none; }
+.prompt-box-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.prompt-box-title { font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+.prompt-text { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; color: #334155; line-height: 1.8; white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow-y: auto; }
+
+/* ─── Attribute value inputs ─── */
+.attr-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.attr-row { display: flex; align-items: center; gap: 10px; }
+.attr-name-tag { background: #1B2A4A; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 6px; white-space: nowrap; min-width: 100px; text-align: center; }
+.attr-value-input { flex: 1; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; }
+.attr-value-input:focus { border-color: #ff6b35; }
+
+/* ─── JSON input ─── */
+.json-textarea { width: 100%; min-height: 200px; font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; background: #f8fafc; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; resize: vertical; outline: none; line-height: 1.6; }
+.json-textarea:focus { border-color: #ff6b35; }
+.json-preview { margin-top: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: none; }
+.json-preview table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.json-preview th { background: #f1f5f9; padding: 6px 10px; text-align: left; font-weight: 700; color: #475569; }
+.json-preview td { padding: 5px 10px; border-top: 1px solid #f1f5f9; color: #334155; }
+
+/* ─── Buttons ─── */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
+.btn-orange { background: #ff6b35; color: #fff; }
+.btn-orange:hover { background: #e55a24; }
+.btn-dark { background: #1B2A4A; color: #fff; }
+.btn-dark:hover { background: #243a65; }
+.btn-green { background: #16a34a; color: #fff; }
+.btn-green:hover { background: #15803d; }
+.btn-copy { background: #f1f5f9; color: #475569; padding: 7px 14px; font-size: 12px; border-radius: 7px; }
+.btn-copy:hover { background: #e2e8f0; }
+.btn-copy.copied { background: #d1fae5; color: #065f46; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ─── Messages ─── */
+.msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 12px; display: none; line-height: 1.5; }
+.msg.ok { background: #d1fae5; color: #065f46; display: block; }
+.msg.err { background: #fee2e2; color: #991b1b; display: block; }
+.msg.info { background: #dbeafe; color: #1e40af; display: block; }
+
+/* ─── Step 4 success ─── */
+.success-box { text-align: center; padding: 32px 20px; }
+.success-icon { font-size: 56px; margin-bottom: 16px; }
+.success-title { font-size: 22px; font-weight: 800; color: #16a34a; margin-bottom: 10px; }
+.success-steps { background: #f8fafc; border-radius: 12px; padding: 20px 24px; margin: 20px 0; text-align: left; }
+.success-steps ol { padding-left: 20px; }
+.success-steps li { font-size: 14px; color: #475569; margin-bottom: 10px; line-height: 1.6; }
+.success-steps li strong { color: #1e293b; }
+
+/* ─── Counter badge ─── */
+.count-badge { display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; margin-left: 10px; }
+
+/* ─── Divider ─── */
+.divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+
+/* ─── Language tip ─── */
+.lang-tip { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 8px 14px; font-size: 12px; color: #0369a1; margin-bottom: 14px; }
+
+/* ─── Radio cards ─── */
+.radio-card-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.radio-card { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fafafa; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.15s; }
+.radio-card input { accent-color: #ff6b35; }
+.radio-card:has(input:checked) { border-color: #ff6b35; background: #fff7ed; color: #c2410c; font-weight: 600; }
+
+/* ─── Checkboxes ─── */
+.check-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.check-item { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fafafa; cursor: pointer; font-size: 13px; color: #475569; transition: all 0.15s; }
+.check-item input { accent-color: #ff6b35; }
+.check-item:has(input:checked) { border-color: #ff6b35; background: #fff7ed; color: #c2410c; font-weight: 600; }
+
+/* ─── Radio inline ─── */
+.radio-inline { display: flex; gap: 16px; margin-top: 6px; }
+.radio-inline label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: #475569; }
+.radio-inline input { accent-color: #ff6b35; }
+
+/* ─── Logistics tip ─── */
+.logistics-tip { display: flex; gap: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #15803d; line-height: 1.6; margin-top: 4px; }
+.logistics-tip-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+/* ─── Pricing tier grid ─── */
+.pricing-info-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #92400e; line-height: 1.5; }
+.pricing-tier-grid { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 8px; margin-top: 12px; align-items: center; }
+.tier-header { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 4px; }
+.tier-label { font-size: 13px; font-weight: 700; color: #1e293b; }
+.sku-attr-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.sku-attr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ─── 販售方式 radio cards ─── */
+.sell-type-box { margin-top: 4px; }
+.sell-type-label { font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 10px; }
+.sell-type-options { display: flex; gap: 12px; }
+.sell-radio { cursor: pointer; flex: 1; }
+.sell-radio input[type=radio] { display: none; }
+.sell-radio-card {
+  border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px 16px;
+  transition: all 0.15s; background: #fff;
+}
+.sell-radio input:checked + .sell-radio-card {
+  border-color: #ff6b35; background: #fff8f5;
+}
+.sell-radio-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 3px; }
+.sell-radio-desc { font-size: 12px; color: #64748b; }
+
+@media (max-width: 600px) { .grid, .grid-3 { grid-template-columns: 1fr; } .attr-row { flex-direction: column; align-items: stretch; } .attr-name-tag { text-align: left; } .sell-type-options { flex-direction: column; } }
+
+/* ─── 產品分類動態欄位 ─── */
+.product-cat-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.product-cat-row input { flex: 1; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 14px; color: #1e293b; outline: none; transition: border-color 0.15s; }
+.product-cat-row input:focus { border-color: #ff6b35; }
+.btn-remove-cat { background: none; border: 1.5px solid #e2e8f0; border-radius: 6px; color: #94a3b8; cursor: pointer; padding: 6px 10px; font-size: 14px; line-height: 1; transition: all 0.15s; }
+.btn-remove-cat:hover { border-color: #fca5a5; color: #ef4444; }
+.btn-add-cat { background: #fff7ed; border: 1.5px solid #ff6b35; border-radius: 8px; color: #ff6b35; cursor: pointer; padding: 8px 16px; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+.btn-add-cat:hover { background: #ff6b35; color: #fff; }
+/* ─── 其它展開輸入框 ─── */
+.other-input { display: none; margin-top: 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 14px; width: 100%; outline: none; color: #1e293b; transition: border-color 0.15s; }
+.other-input:focus { border-color: #ff6b35; }
+.other-input.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>阿里巴巴商家旺舖暨商品資料整理工具</h1>
+  <p>填寫公司與商品資料，AI 協助產出旺舖介紹、拓品 Listing、批次匯入 Excel</p>
+</div>
+
+<div class="progress">
+  <div class="prog-item active" id="prog1" onclick="goStep(1)">
+    <div class="prog-num">1</div><div class="prog-label">公司資料 & 旺舖</div>
+  </div>
+  <div class="prog-arrow">›</div>
+  <div class="prog-item" id="prog2" onclick="goStep(2)">
+    <div class="prog-num">2</div><div class="prog-label">商品 & 屬性</div>
+  </div>
+  <div class="prog-arrow">›</div>
+  <div class="prog-item" id="prog3" onclick="goStep(3)">
+    <div class="prog-num">3</div><div class="prog-label">AI 拓品屬性</div>
+  </div>
+  <div class="prog-arrow">›</div>
+  <div class="prog-item" id="prog4" onclick="goStep(4)">
+    <div class="prog-num">4</div><div class="prog-label">JSON</div>
+  </div>
+  <div class="prog-arrow">›</div>
+  <div class="prog-item" id="prog5" onclick="goStep(5)">
+    <div class="prog-num">5</div><div class="prog-label">詳情頁 & 下載</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ════ STEP 1 ════ -->
+  <div class="step-card visible" id="step1">
+    <div class="step-head">
+      <div class="step-icon">1</div>
+      <div class="step-title">公司資料 & 旺舖介紹</div>
+    </div>
+    <div class="step-sub">填寫公司資料，產出旺舖介紹 Prompt，讓 AI 幫你寫公司介紹文案；同時這些資料也會自動帶入後面的商品詳情頁。</div>
+
+    <div class="lang-tip">💬 以下欄位中英文皆可填寫，AI 會自動轉換成英文輸出</div>
+
+    <!-- ── 基礎資料 ── -->
+    <div class="sec-label">基礎資料</div>
+
+    <div class="field" style="margin-top:14px">
+      <label>公司名稱 <span class="required-star">✱</span></label>
+      <input id="companyName" placeholder="例：台灣精工股份有限公司 / Taiwan Craft Co., Ltd." />
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div class="field">
+        <label>官網網址（選填）</label>
+        <input id="companyWebsite" placeholder="https://www.example.com" />
+      </div>
+      <div class="field">
+        <label>成立年份 / 規模</label>
+        <input id="companyScale" placeholder="例：2005年成立，工廠 200 人" />
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>主營產品分類 <span class="required-star">✱</span></label>
+      <span class="hint">每個分類一個輸入框，描述越詳細越好</span>
+      <div id="productCatList">
+        <div class="product-cat-row">
+          <input class="product-cat-input" placeholder="例：保養品精華液" />
+        </div>
+      </div>
+      <button class="btn-add-cat" style="margin-top:10px" onclick="addProductCat()">＋ 新增分類</button>
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>產品關鍵詞（逗號分隔）</label>
+      <input id="productKeywords" placeholder="例：skin regeneration, anti-aging serum" />
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>目標市場 <span class="required-star">✱</span></label>
+      <div class="check-group">
+        <label class="check-item"><input type="checkbox" name="coMarket" value="北美市場"> 北美市場</label>
+        <label class="check-item"><input type="checkbox" name="coMarket" value="歐洲市場"> 歐洲市場</label>
+        <label class="check-item"><input type="checkbox" name="coMarket" value="東南亞市場"> 東南亞市場</label>
+        <label class="check-item"><input type="checkbox" name="coMarket" value="中東市場"> 中東市場</label>
+        <label class="check-item"><input type="checkbox" name="coMarket" value="拉丁美洲"> 拉丁美洲</label>
+        <label class="check-item"><input type="checkbox" name="coMarket" value="非洲市場"> 非洲市場</label>
+        <label class="check-item"><input type="checkbox" name="coMarket" value="其它" onchange="toggleOther('coMarket','coMarketOther')"> 其它</label>
+      </div>
+      <input id="coMarketOther" class="other-input" placeholder="請填寫其它目標市場" />
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>核心優勢（可多選）</label>
+      <div class="check-group">
+        <label class="check-item"><input type="checkbox" name="coAdv" value="價格優勢"> 價格優勢</label>
+        <label class="check-item"><input type="checkbox" name="coAdv" value="品質保證"> 品質保證</label>
+        <label class="check-item"><input type="checkbox" name="coAdv" value="客製化能力"> 客製化能力</label>
+        <label class="check-item"><input type="checkbox" name="coAdv" value="快速交貨"> 快速交貨</label>
+        <label class="check-item"><input type="checkbox" name="coAdv" value="研發實力"> 研發實力</label>
+        <label class="check-item"><input type="checkbox" name="coAdv" value="國際認證齊全"> 國際認證齊全</label>
+        <label class="check-item"><input type="checkbox" name="coAdv" value="其它" onchange="toggleOther('coAdv','coAdvOther')"> 其它</label>
+      </div>
+      <input id="coAdvOther" class="other-input" placeholder="請填寫其它優勢" />
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>品質認證（逗號分隔）</label>
+      <input id="companyCert" placeholder="例：ISO 9001, CE, RoHS, BSCI, UL" />
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div class="field">
+        <label>提供客製化服務？</label>
+        <div class="radio-inline">
+          <label><input type="radio" name="customService" value="是"> 是</label>
+          <label><input type="radio" name="customService" value="否"> 否</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>提供樣品服務？</label>
+        <div class="radio-inline">
+          <label><input type="radio" name="sampleService" value="是"> 是</label>
+          <label><input type="radio" name="sampleService" value="否"> 否</label>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 定位細節 ── -->
+    <div class="sec-label">定位細節</div>
+
+    <div class="field" style="margin-top:14px">
+      <label>身份定位 <span class="required-star">✱</span></label>
+      <div class="radio-card-group">
+        <label class="radio-card"><input type="radio" name="identity" value="工廠直營"> 工廠直營</label>
+        <label class="radio-card"><input type="radio" name="identity" value="貿易商"> 貿易商</label>
+        <label class="radio-card"><input type="radio" name="identity" value="工貿一體"> 工貿一體</label>
+        <label class="radio-card"><input type="radio" name="identity" value="品牌商"> 品牌商</label>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>定價策略（可多選）</label>
+      <div class="check-group">
+        <label class="check-item"><input type="checkbox" name="coPricing" value="高性價比"> 高性價比</label>
+        <label class="check-item"><input type="checkbox" name="coPricing" value="高端定制"> 高端定制</label>
+        <label class="check-item"><input type="checkbox" name="coPricing" value="其它" onchange="toggleOther('coPricing','coPricingOther')"> 其它</label>
+      </div>
+      <input id="coPricingOther" class="other-input" placeholder="請填寫其它定價策略" />
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 風格設計 ── -->
+    <div class="sec-label">風格設計</div>
+
+    <div class="field" style="margin-top:14px">
+      <label>旺舖風格（選填）</label>
+      <div class="radio-card-group">
+        <label class="radio-card"><input type="radio" name="storeStyle" value="現代簡約"> 現代簡約</label>
+        <label class="radio-card"><input type="radio" name="storeStyle" value="專業企業"> 專業企業</label>
+        <label class="radio-card"><input type="radio" name="storeStyle" value="工業硬核"> 工業硬核</label>
+        <label class="radio-card"><input type="radio" name="storeStyle" value="溫馨居家"> 溫馨居家</label>
+        <label class="radio-card"><input type="radio" name="storeStyle" value="科技未來"> 科技未來</label>
+        <label class="radio-card"><input type="radio" name="storeStyle" value="大氣極簡"> 大氣極簡</label>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <button class="btn btn-orange" onclick="generateStorefrontPrompt()">產出旺舖介紹 Prompt →</button>
+    <div class="msg" id="step1Msg"></div>
+
+    <div class="prompt-box" id="storefrontPromptBox">
+      <div class="prompt-box-header">
+        <div class="prompt-box-title">複製以下 Prompt，貼到 ChatGPT 或 Gemini</div>
+        <button class="btn btn-copy" id="btnCopyStorefront" onclick="copyPrompt('storefrontPromptText','btnCopyStorefront')">一鍵複製</button>
+      </div>
+      <div class="prompt-text" id="storefrontPromptText"></div>
+    </div>
+
+    <div style="margin-top:20px">
+      <button class="btn btn-dark" onclick="goStep(2)">前往 Step 2：商品拓品 →</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 2 ════ -->
+  <div class="step-card" id="step2">
+    <div class="step-head">
+      <div class="step-icon">2</div>
+      <div class="step-title">商品資料 & 拓品屬性</div>
+    </div>
+    <div class="step-sub">填寫商品資料，產出屬性研究 Prompt，送給 AI 取得拓品屬性建議。</div>
+
+    <div class="sec-label">商品基本資訊</div>
+    <div class="lang-tip">💬 以下欄位中英文皆可填寫，AI 會自動轉換成英文輸出</div>
+    <div class="grid">
+      <div class="field">
+        <label>產品名稱 <span class="required-star">✱</span></label>
+        <input id="productName" placeholder="例：鑽石棉T恤 / Custom Rhinestone T-Shirt" />
+      </div>
+      <div class="field">
+        <label>原產地</label>
+        <input id="origin" placeholder="例：台灣 / Taiwan" />
+      </div>
+      <div class="field">
+        <label>品牌</label>
+        <input id="brand" placeholder="例：我的品牌 / MyBrand" />
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>產品描述 <span class="required-star">✱</span></label>
+      <textarea id="productDesc" rows="3" placeholder="描述材質、功能、特色、適用場景...（中英文皆可，最多 20,000 字）"></textarea>
+      <span class="hint">同時用於 AI 分析和 Excel 產品描述欄位</span>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>主要賣點或特色（逗號分隔）</label>
+      <input id="productFeatures" placeholder="例：可客製 logo、水鑽工藝、OEM、快速交貨 / custom logo, OEM available" />
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>目標市場</label>
+      <input id="targetMarket" placeholder="例：北美、歐洲、東南亞 / North America, Europe" />
+    </div>
+
+    <hr class="divider">
+
+    <div class="sec-label" style="margin-top:22px">商品圖片 URL</div>
+    <div class="grid">
+      <div class="field"><label>主圖 Image 1 <span class="required-star">✱</span></label><input id="img1" placeholder="https://..." /></div>
+      <div class="field"><label>Image 2</label><input id="img2" placeholder="https://..." /></div>
+      <div class="field"><label>Image 3</label><input id="img3" placeholder="https://..." /></div>
+      <div class="field"><label>Image 4</label><input id="img4" placeholder="https://..." /></div>
+      <div class="field"><label>Image 5</label><input id="img5" placeholder="https://..." /></div>
+      <div class="field"><label>Image 6</label><input id="img6" placeholder="https://..." /></div>
+    </div>
+
+    <div class="sec-label" style="margin-top:22px">販售設定</div>
+
+    <!-- 販售方式選擇 -->
+    <div class="sell-type-box">
+      <div class="sell-type-label">販售方式 <span class="required-star">✱</span></div>
+      <div class="sell-type-options">
+        <label class="sell-radio" id="radioUnit">
+          <input type="radio" name="sellBy" value="unit" checked onchange="onSellByChange()">
+          <div class="sell-radio-card">
+            <div class="sell-radio-title">按件販售（Unit）</div>
+            <div class="sell-radio-desc">每次購買 N 件，買家自選數量</div>
+          </div>
+        </label>
+        <label class="sell-radio" id="radioBatch">
+          <input type="radio" name="sellBy" value="batch" onchange="onSellByChange()">
+          <div class="sell-radio-card">
+            <div class="sell-radio-title">按批販售（Batch）</div>
+            <div class="sell-radio-desc">每批固定數量，例如每批 12 件</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- batch 才顯示：批量數 -->
+    <div id="batchQtyWrap" style="display:none; margin-top:12px;">
+      <div class="field">
+        <label>每批數量（Batch quantity）<span class="required-star">✱</span></label>
+        <input id="batchQty" type="number" min="1" placeholder="例：12（每批 12 件）" />
+        <span class="hint">輸入每批包含幾件商品</span>
+      </div>
+    </div>
+
+    <!-- 單位下拉（unit 才顯示，batch 不需要） -->
+    <div id="unitWrap" style="margin-top:12px;">
+      <div class="field">
+        <label>販售單位（Unit）<span class="required-star">✱</span></label>
+        <select id="unit">
+          <option value="">-- 請選擇單位 --</option>
+          <option value="Piece/Pieces">Piece/Pieces（件）</option>
+          <option value="Box/Boxes">Box/Boxes（盒）</option>
+          <option value="Set/Sets">Set/Sets（套）</option>
+          <option value="Pack/Packs">Pack/Packs（包）</option>
+          <option value="Pair/Pairs">Pair/Pairs（雙）</option>
+          <option value="Bag/Bags">Bag/Bags（袋）</option>
+          <option value="Carton/Cartons">Carton/Cartons（箱）</option>
+          <option value="Case/Cases">Case/Cases（組）</option>
+          <option value="Dozen/Dozens">Dozen/Dozens（打）</option>
+          <option value="Unit/Units">Unit/Units（單位）</option>
+          <option value="Kilogram/Kilograms">Kilogram/Kilograms（公斤）</option>
+          <option value="Gram/Grams">Gram/Grams（克）</option>
+          <option value="Pound/Pounds">Pound/Pounds（磅）</option>
+          <option value="Ton/Tons">Ton/Tons（噸）</option>
+          <option value="Liter/Liters">Liter/Liters（公升）</option>
+          <option value="Milliliter/Milliliters">Milliliter/Milliliters（毫升）</option>
+          <option value="Meter/Meters" disabled>── 長度 ──</option>
+          <option value="Millimeter/Millimeters">Millimeter/Millimeters（毫米）</option>
+          <option value="Centimeter/Centimeters">Centimeter/Centimeters（公分）</option>
+          <option value="Foot/Feet">Foot/Feet（英尺）</option>
+          <option value="Inch/Inches">Inch/Inches（英吋）</option>
+          <option value="Yard/Yards">Yard/Yards（碼）</option>
+          <option value="Kilometer/Kilometers">Kilometer/Kilometers（公里）</option>
+          <option value="Mile/Miles">Mile/Miles（英里）</option>
+          <option value="Square Meter/Square Meters" disabled>── 面積 ──</option>
+          <option value="Square Meter/Square Meters">Square Meter/Square Meters（平方公尺）</option>
+          <option value="Hectare/Hectares">Hectare/Hectares（公頃）</option>
+          <option value="Acre/Acres">Acre/Acres（英畝）</option>
+          <option value="Cubic Meter/Cubic Meters" disabled>── 體積 ──</option>
+          <option value="Cubic Meter/Cubic Meters">Cubic Meter/Cubic Meters（立方公尺）</option>
+          <option value="Cubic Centimeter/Cubic Centimeters">Cubic Centimeter/Cubic Centimeters</option>
+          <option value="Cubic Foot/Cubic Feet">Cubic Foot/Cubic Feet</option>
+          <option value="Cubic Inch/Cubic Inches">Cubic Inch/Cubic Inches</option>
+          <option value="Gallon/Gallons">Gallon/Gallons（加侖）</option>
+          <option value="Barrel/Barrels">Barrel/Barrels（桶）</option>
+          <option value="Bushel/Bushels">Bushel/Bushels（蒲式耳）</option>
+        </select>
+        <span class="hint">選擇與你的商品最符合的計量單位</span>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div class="field">
+        <label>幣別（Currency）</label>
+        <select id="currency">
+          <option value="USD">USD（美元）</option>
+          <option value="EUR">EUR（歐元）</option>
+          <option value="GBP">GBP（英鎊）</option>
+          <option value="TWD">TWD（台幣）</option>
+          <option value="JPY">JPY（日幣）</option>
+          <option value="CNY">CNY（人民幣）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>庫存（Inventory）</label>
+        <input id="inventory" type="number" placeholder="不填預設 9999999" />
+      </div>
+    </div>
+
+    <!-- 定價類型 — 卡片切換 -->
+    <div class="sell-type-box" style="margin-top:20px;">
+      <div class="sell-type-label">定價類型 <span class="required-star">✱</span></div>
+      <div class="sell-type-options">
+        <label class="sell-radio">
+          <input type="radio" name="pricingType" value="Tiered pricing" checked onchange="onPricingChange()">
+          <div class="sell-radio-card">
+            <div class="sell-radio-title">階梯定價 Tiered</div>
+            <div class="sell-radio-desc">數量越多，單價越低（最常用）</div>
+          </div>
+        </label>
+        <label class="sell-radio">
+          <input type="radio" name="pricingType" value="SKU pricing" onchange="onPricingChange()">
+          <div class="sell-radio-card">
+            <div class="sell-radio-title">SKU 定價 SKU</div>
+            <div class="sell-radio-desc">不同顏色/尺寸有各自的價格</div>
+          </div>
+        </label>
+        <label class="sell-radio">
+          <input type="radio" name="pricingType" value="Range pricing" onchange="onPricingChange()">
+          <div class="sell-radio-card">
+            <div class="sell-radio-title">區間定價 Range</div>
+            <div class="sell-radio-desc">提供最低～最高價格範圍</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Tiered pricing 欄位（AM-AR）-->
+    <div id="tieredWrap" style="margin-top:16px;">
+      <div class="pricing-info-box">💡 請填寫 1～3 個階梯，數量越大單價越低。至少填 Tier 1。</div>
+      <div class="pricing-tier-grid">
+        <div class="tier-header"></div>
+        <div class="tier-header">單價（USD）</div>
+        <div class="tier-header">最小訂購量 MOQ</div>
+        <div class="tier-label">Tier 1 <span class="required-star">✱</span></div>
+        <div class="field"><input id="t1p" type="number" step="0.01" placeholder="e.g. 20.00" /></div>
+        <div class="field"><input id="t1m" type="number" placeholder="e.g. 100" /></div>
+        <div class="tier-label">Tier 2</div>
+        <div class="field"><input id="t2p" type="number" step="0.01" placeholder="e.g. 18.00（需 < Tier 1）" /></div>
+        <div class="field"><input id="t2m" type="number" placeholder="e.g. 500（需 > MOQ 1）" /></div>
+        <div class="tier-label">Tier 3</div>
+        <div class="field"><input id="t3p" type="number" step="0.01" placeholder="e.g. 15.00（需 < Tier 2）" /></div>
+        <div class="field"><input id="t3m" type="number" placeholder="e.g. 1000（需 > MOQ 2）" /></div>
+      </div>
+    </div>
+
+    <!-- SKU pricing 欄位（AB-AL）-->
+    <div id="skuWrap" style="display:none; margin-top:16px;">
+      <div class="pricing-info-box">💡 SKU 定價：每個顏色/尺寸組合都有獨立的價格。需填寫 SKU 屬性（最多 4 組）。</div>
+      <div class="grid" style="margin-top:12px;">
+        <div class="field">
+          <label>SPU ID（型號，必填）<span class="required-star">✱</span></label>
+          <input id="skuSpuId" placeholder="e.g. SHIRT-2024" />
+          <span class="hint">同一款商品的所有 SKU 必須用相同 SPU ID</span>
+        </div>
+        <div class="field">
+          <label>SKU code（SKU 編號）</label>
+          <input id="skuCode" placeholder="e.g. SHIRT-RED-M（可留空）" />
+        </div>
+        <div class="field">
+          <label>SKU pricing（每件單價）<span class="required-star">✱</span></label>
+          <input id="skuPrice" type="number" step="0.01" placeholder="e.g. 25.00" />
+        </div>
+      </div>
+      <div class="sec-label" style="margin-top:14px;">SKU 屬性（定義顏色/尺寸等，最多 4 組）</div>
+      <div class="sku-attr-grid">
+        <div class="sku-attr-row">
+          <div class="field"><label>屬性名稱 1 <span class="required-star">✱</span></label><input id="skuAn1" placeholder="e.g. Color" /></div>
+          <div class="field"><label>屬性值 1 <span class="required-star">✱</span></label><input id="skuAv1" placeholder="e.g. Red" /></div>
+        </div>
+        <div class="sku-attr-row">
+          <div class="field"><label>屬性名稱 2</label><input id="skuAn2" placeholder="e.g. Size" /></div>
+          <div class="field"><label>屬性值 2</label><input id="skuAv2" placeholder="e.g. M" /></div>
+        </div>
+        <div class="sku-attr-row">
+          <div class="field"><label>屬性名稱 3</label><input id="skuAn3" placeholder="" /></div>
+          <div class="field"><label>屬性值 3</label><input id="skuAv3" placeholder="" /></div>
+        </div>
+        <div class="sku-attr-row">
+          <div class="field"><label>屬性名稱 4</label><input id="skuAn4" placeholder="" /></div>
+          <div class="field"><label>屬性值 4</label><input id="skuAv4" placeholder="" /></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Range pricing 欄位（AS-AT）-->
+    <div id="rangeWrap" style="display:none; margin-top:16px;">
+      <div class="pricing-info-box">💡 區間定價：顯示「最低 X 元 ～ 最高 Y 元」，讓買家了解價格範圍。</div>
+      <div class="grid" style="margin-top:12px;">
+        <div class="field">
+          <label>最低價格 Range Lower Limit <span class="required-star">✱</span></label>
+          <input id="rangeLow" type="number" step="0.01" placeholder="e.g. 3.00" />
+        </div>
+        <div class="field">
+          <label>最高價格 Range Higher Limit <span class="required-star">✱</span></label>
+          <input id="rangeHigh" type="number" step="0.01" placeholder="e.g. 9.00" />
+        </div>
+      </div>
+    </div>
+
+    <!-- SPU ID（Tiered & Range 用）-->
+    <div id="spuIdWrap" style="margin-top:14px;">
+      <div class="field">
+        <label>SPU ID（型號前綴，選填）</label>
+        <input id="spuId" placeholder="e.g. PROD-2024" />
+        <span class="hint">每筆拓品自動加 -001 / -002...</span>
+      </div>
+    </div>
+
+    <div class="sec-label" style="margin-top:22px">物流資訊</div>
+    <div class="logistics-tip">
+      <div class="logistics-tip-icon">💡</div>
+      <div>
+        <strong>選填說明：</strong>以下欄位（✱ 除外）阿里不強制要求，但<strong>填越完整，買家越容易詢盤下訂</strong>。<br>
+        建議至少填寫：毛重、運費模板、預計交期、商品尺寸、物流屬性。
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:14px;">
+      <div class="field">
+        <label>毛重（Gross weight）KG <span class="required-star">✱</span></label>
+        <input id="weight" type="number" step="0.01" placeholder="e.g. 0.50" />
+        <span class="hint">含包裝的總重量，純數字</span>
+      </div>
+      <div class="field">
+        <label>運費模板（Shipping template）<span class="required-star">✱</span></label>
+        <input id="shipTemplate" placeholder="e.g. Standard Shipping" />
+        <span class="hint">阿里後台設定的模板名稱</span>
+      </div>
+      <div class="field">
+        <label>出貨數量 1（Shipping quantity 1）<span class="required-star">✱</span></label>
+        <input id="shipQty1" type="number" placeholder="e.g. 1" />
+        <span class="hint">此交期對應的最小出貨量</span>
+      </div>
+      <div class="field">
+        <label>預計交期 1（Lead time 1）天 <span class="required-star">✱</span></label>
+        <input id="shipLead1" type="number" placeholder="e.g. 7" />
+        <span class="hint">幾天內出貨，純數字</span>
+      </div>
+      <div class="field">
+        <label>商品長度 cm <span class="required-star">✱</span></label>
+        <input id="itemL" type="number" step="0.1" placeholder="e.g. 30" />
+      </div>
+      <div class="field">
+        <label>商品寬度 cm <span class="required-star">✱</span></label>
+        <input id="itemW" type="number" step="0.1" placeholder="e.g. 20" />
+      </div>
+      <div class="field">
+        <label>商品高度 cm <span class="required-star">✱</span></label>
+        <input id="itemH" type="number" step="0.1" placeholder="e.g. 5" />
+      </div>
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>物流屬性（Logistics attributes）<span class="required-star">✱</span></label>
+        <select id="logisticsAttr">
+          <option value="Ordinary goods">Ordinary goods｜普通貨物（最常用）</option>
+          <optgroup label="─── 電池類 ───">
+            <option value="Built-in battery (non-lithium battery):Built-in battery (non-lithium battery) ≤100WH">內置電池（非鋰）≤100WH</option>
+            <option value="Built-in battery (non-lithium battery):Built-in battery (non-lithium battery) >100WH">內置電池（非鋰）>100WH</option>
+            <option value="Built-in battery (lithium battery):Built-in battery (lithium battery) ≤100WH">內置電池（鋰電池）≤100WH</option>
+            <option value="Built-in battery (lithium battery):Built-in battery (lithium battery) >100WH">內置電池（鋰電池）>100WH</option>
+            <option value="Matching battery (non-lithium battery):Matching battery (non-lithium battery) ≤100WH">隨附電池（非鋰）≤100WH</option>
+            <option value="Matching battery (non-lithium battery):Matching battery (non-lithium battery) > 100WH">隨附電池（非鋰）>100WH</option>
+            <option value="Matching battery (lithium battery):Matching battery (lithium battery) ≤100WH">隨附電池（鋰電池）≤100WH</option>
+            <option value="Matching battery (lithium battery):Matching battery (lithium battery) > 100WH">隨附電池（鋰電池）>100WH</option>
+            <option value="Pure battery">Pure battery｜純電池</option>
+            <option value="Power bank">Power bank｜行動電源</option>
+            <option value="Pure battery (limited):Pure battery (limited)≤100WH">純電池（限制型）≤100WH</option>
+            <option value="Power bank (limited):Power bank (limited)≤100WH">行動電源（限制型）≤100WH</option>
+          </optgroup>
+          <optgroup label="─── 磁性物品 ───">
+            <option value="Magnetized: Weak magnetism">Magnetized: Weak magnetism｜弱磁</option>
+            <option value="Magnetized: Strong magnetism">Magnetized: Strong magnetism｜強磁</option>
+          </optgroup>
+          <optgroup label="─── 化妝品 ───">
+            <option value="Cosmetics-powder cake">Cosmetics-powder cake｜粉餅</option>
+            <option value="Cosmetics-powder">Cosmetics-powder｜粉末類</option>
+            <option value="Oily cosmetics-alcohol-free:Oily cosmetics- no alcohol ≤100ml per">油性化妝品（無酒精）≤100ml/件</option>
+            <option value="Oily cosmetics-alcohol-free:Oily cosmetics- no alcohol > 100ml per">油性化妝品（無酒精）>100ml/件</option>
+            <option value="Cream cosmetics - non alcoholic:Cream cosmetics - no alcohol ≤100ml per">膏狀化妝品（無酒精）≤100ml/件</option>
+            <option value="Cream cosmetics - non alcoholic:Cream cosmetics - no alcohol > 100ml per">膏狀化妝品（無酒精）>100ml/件</option>
+            <option value="Watery cosmetics-alcohol-free:Watery cosmetics-no alcohol ≤100ml per">水性化妝品（無酒精）≤100ml/件</option>
+            <option value="Watery cosmetics-alcohol-free:Watery cosmetics-no alcohol > 100ml per">水性化妝品（無酒精）>100ml/件</option>
+            <option value="Perfume:Perfume single item≤100ml">香水｜單件 ≤100ml</option>
+            <option value="Perfume:Perfume single item>100ml">香水｜單件 >100ml</option>
+          </optgroup>
+          <optgroup label="─── 食品飲料 ───">
+            <option value="food and beverage:Non-inflatable packaged snacks">食品：非充氣包裝零食</option>
+            <option value="food and beverage:Inflatable packaged snacks">食品：充氣包裝零食</option>
+            <option value="food and beverage:Fresh food">食品：生鮮食品</option>
+            <option value="food and beverage:Drinks">食品：飲料</option>
+          </optgroup>
+          <optgroup label="─── 特殊管制品 ───">
+            <option value="Selenium drum/ink cartridge">Selenium drum/ink cartridge｜硒鼓/墨盒</option>
+            <option value="Plant extracts">Plant extracts｜植物萃取物</option>
+            <option value="Sex Products">Sex Products｜成人用品</option>
+            <option value="Medical supplies">Medical supplies｜醫療用品</option>
+            <option value="Animal extract">Animal extract｜動物提取物</option>
+            <option value="Dinner knife:Uncut blade">餐刀｜未開刃</option>
+            <option value="Dinner knife:Edge">餐刀｜開刃</option>
+            <option value="Other knives:Other knives≤15CM">其他刀具｜≤15CM</option>
+            <option value="UAV">UAV｜無人機</option>
+            <option value="Drones (with limitations):Drones (restricted) for civilian use">無人機（限制型）民用</option>
+            <option value="toy gun:Toy Gun Model Gun - Non 1:1 Simulation">玩具槍｜模型槍（非1:1仿真）</option>
+            <option value="toy gun:Toy gun model gun-1:1 simulation">玩具槍｜模型槍（1:1仿真）</option>
+            <option value="toy gun:Toy Gun Other Toy Guns">玩具槍｜其他玩具槍</option>
+            <option value="lighter:Lighter has no gas or oil">打火機｜無燃料</option>
+            <option value="Solid alcohol containing alcohol">固體酒精</option>
+            <option value="Alcoholic liquid containing alcohol">含酒精液體</option>
+          </optgroup>
+        </select>
+        <span class="hint">選擇你商品最符合的物流分類，影響可使用的運送方式；大多數商品選「Ordinary goods」</span>
+      </div>
+      <div class="field">
+        <label>HS Code（關稅編碼）</label>
+        <input id="hsCode" placeholder="e.g. 6109100010" />
+        <span class="hint">填寫可讓買家更快完成進口清關，選填但建議填</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <button class="btn btn-orange" onclick="generateAttrPrompt()">產出拓品屬性 Prompt →</button>
+    <div class="msg" id="step2Msg"></div>
+
+    <div class="prompt-box" id="attrPromptBox">
+      <div class="prompt-box-header">
+        <div class="prompt-box-title">複製以下 Prompt，貼到 ChatGPT 或 Gemini</div>
+        <button class="btn btn-copy" id="btnCopyAttr" onclick="copyPrompt('attrPromptText','btnCopyAttr')">一鍵複製</button>
+      </div>
+      <div class="prompt-text" id="attrPromptText"></div>
+    </div>
+
+    <div id="step2Next" style="display:none; margin-top:16px;">
+      <button class="btn btn-dark" onclick="goStep(3)">AI 已回覆，前往 Step 3 →</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 3 ════ -->
+  <div class="step-card" id="step3">
+    <div class="step-head">
+      <div class="step-icon">3</div>
+      <div class="step-title">填入 AI 建議的拓品屬性</div>
+    </div>
+    <div class="step-sub">把 AI 回傳的「屬性名稱」貼入下方，工具自動產生輸入框。再把每個屬性的建議值分別貼入，然後按「產出拓品 Prompt」。</div>
+
+    <div class="field">
+      <label>貼入屬性名稱（英文，逗號分隔，最多 5 個）<span class="required-star">✱</span></label>
+      <input id="attrNames" placeholder="例：size,color,material,level,custom" oninput="parseAttrNames()" />
+      <span class="hint">AI 輸出的第一行，直接複製貼上</span>
+    </div>
+
+    <div class="attr-grid" id="attrValueGrid"></div>
+
+    <hr class="divider" style="margin-top:20px">
+    <div class="field" style="max-width:200px">
+      <label>拓品數量<span class="required-star">✱</span></label>
+      <input id="listingCount" type="number" min="1" max="30" value="10" />
+      <span class="hint">建議 10–20 隻品質最佳；最多 30 隻（超過 20 隻品質會開始參差）</span>
+    </div>
+
+    <div style="margin-top:16px">
+      <button class="btn btn-orange" onclick="generateExpansionPrompt()">產出拓品 Prompt →</button>
+    </div>
+    <div class="msg" id="step3Msg"></div>
+
+    <div class="prompt-box" id="expandPromptBox">
+      <div class="prompt-box-header">
+        <div class="prompt-box-title">複製以下 Prompt，貼到 ChatGPT 或 Gemini</div>
+        <button class="btn btn-copy" id="btnCopyExpand" onclick="copyPrompt('expandPromptText','btnCopyExpand')">一鍵複製</button>
+      </div>
+      <div class="prompt-text" id="expandPromptText"></div>
+    </div>
+
+    <div id="step3Next" style="display:none; margin-top:16px;">
+      <button class="btn btn-dark" onclick="goStep(4)">AI 已回覆，前往 Step 4 →</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 4 ════ -->
+  <div class="step-card" id="step4">
+    <div class="step-head">
+      <div class="step-icon">4</div>
+      <div class="step-title">貼入 AI 產出的 JSON</div>
+    </div>
+    <div class="step-sub">把 AI 剛才產出的 JSON 貼在下方，確認格式正確後前往下一步。</div>
+
+    <div class="field">
+      <textarea id="jsonInput" class="json-textarea" placeholder='把 AI 的 JSON 貼在這裡（直接貼，不需要去掉 ```json 標記）...' oninput="validateJSON()"></textarea>
+    </div>
+    <div class="msg" id="step4Msg"></div>
+    <div class="json-preview" id="jsonPreview"></div>
+
+    <div id="step4Next" style="display:none; margin-top:16px;">
+      <button class="btn btn-dark" onclick="goStep(5)">JSON 正確，前往 Step 5 →</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 5 ════ -->
+  <div class="step-card" id="step5">
+    <div class="step-head">
+      <div class="step-icon">5</div>
+      <div class="step-title">商品詳情頁（選填）& 下載 Excel</div>
+    </div>
+    <div class="step-sub">（選填）補充交期、包裝等資料，AI 會自動結合前面所有資訊產出完整詳情頁文案；或直接略過，按下方按鈕下載 Excel。</div>
+
+    <div class="lang-tip">💬 以下欄位中英文皆可填寫，AI 會自動轉換成英文輸出</div>
+
+    <div class="grid">
+      <div class="field">
+        <label>包裝方式（Packaging）</label>
+        <input id="descPkg" placeholder="例：獨立紙盒包裝，12 件 / 箱" />
+      </div>
+      <div class="field">
+        <label>MOQ（最低訂購量）</label>
+        <input id="descMoq" placeholder="例：100 pcs" />
+      </div>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <div class="field">
+        <label>交期（Lead time）</label>
+        <input id="descLeadtime" placeholder="例：7-15 天" />
+      </div>
+      <div class="field">
+        <label>付款方式（Payment terms）</label>
+        <input id="descPayment" placeholder="例：T/T, L/C, PayPal" />
+      </div>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <div class="field">
+        <label>客製化服務（Customization options）</label>
+        <input id="descCustomize" placeholder="例：可客製 Logo、顏色、尺寸，MOQ 200 pcs" />
+      </div>
+      <div class="field">
+        <label>目標買家類型（Buyer type）</label>
+        <input id="descBuyerType" placeholder="例：零售商、品牌商、設計師" />
+      </div>
+    </div>
+
+    <hr class="divider" style="margin-top:20px">
+    <button class="btn btn-orange" onclick="generateDescPrompt()">產出商品詳情頁 Prompt →</button>
+    <div class="msg" id="step5Msg"></div>
+
+    <div class="prompt-box" id="descPromptBox">
+      <div class="prompt-box-header">
+        <div class="prompt-box-title">複製以下 Prompt，貼到 ChatGPT 或 Gemini</div>
+        <button class="btn btn-copy" id="btnCopyDesc" onclick="copyPrompt('descPromptText','btnCopyDesc')">一鍵複製</button>
+      </div>
+      <div class="prompt-text" id="descPromptText"></div>
+    </div>
+
+    <div id="step5DescInput" style="display:none; margin-top:20px;">
+      <div class="field">
+        <label>貼入 AI 產出的詳情頁文案（貼入後自動套用到所有商品）</label>
+        <textarea id="aiDescriptionInput" rows="6" placeholder="把 AI 回覆的內容直接貼在這裡..." oninput="onDescInput()"></textarea>
+        <span class="hint" id="descSavedHint"></span>
+      </div>
+    </div>
+
+    <hr class="divider" style="margin-top:24px">
+    <button class="btn btn-green" onclick="generateExcel()" id="btnGenerate">⬇ 轉換並下載 Excel</button>
+    <div class="msg" id="genMsg"></div>
+
+    <div id="successBox" style="display:none; margin-top:24px;">
+      <div class="success-box">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Excel 已成功下載！</div>
+        <div class="success-steps">
+          <ol>
+            <li><strong>打開剛下載的 Excel 檔案</strong>，確認第 5 列起是你的商品資料，前 4 列是阿里官方表頭。</li>
+            <li>如果你已有<strong>阿里後台模板</strong>（有設定過運費模板等），可以把第 5 列起的資料，複製貼到你的模板第 5 列。</li>
+            <li>前往阿里巴巴後台 → <strong>產品管理 → 批次上傳</strong>，選擇 Excel 檔案上傳。</li>
+            <li>上傳後，阿里系統會自動比對欄位，有錯誤欄位會顯示紅字，<strong>按照提示修正</strong>後重新上傳。</li>
+          </ol>
+        </div>
+        <button class="btn btn-orange" onclick="goStep(2)" style="margin:0 auto">重新拓品 →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// 販售方式 — 條件顯示
+// ══════════════════════════════════════════════════════
+function onSellByChange() {
+  var isBatch = document.querySelector('input[name="sellBy"]:checked').value === "batch";
+  document.getElementById("batchQtyWrap").style.display = isBatch ? "block" : "none";
+  // batch 模式：Unit 欄不需要填（固定為空，阿里自動處理）
+  document.getElementById("unitWrap").style.display = isBatch ? "none" : "block";
+}
+
+function getSellBy() {
+  var el = document.querySelector('input[name="sellBy"]:checked');
+  return el ? el.value : "unit";
+}
+
+function getPricingType() {
+  var el = document.querySelector('input[name="pricingType"]:checked');
+  return el ? el.value : "Tiered pricing";
+}
+
+function onPricingChange() {
+  var pt = getPricingType();
+  document.getElementById("tieredWrap").style.display = pt === "Tiered pricing" ? "block" : "none";
+  document.getElementById("skuWrap").style.display    = pt === "SKU pricing"    ? "block" : "none";
+  document.getElementById("rangeWrap").style.display  = pt === "Range pricing"  ? "block" : "none";
+  // SPU ID 只有 Tiered / Range 用（SKU pricing 的 SPU ID 在 skuWrap 裡）
+  document.getElementById("spuIdWrap").style.display  = pt !== "SKU pricing"    ? "block" : "none";
+}
+
+// ══════════════════════════════════════════════════════
+// 全域狀態
+// ══════════════════════════════════════════════════════
+var parsedListings = null;
+var currentStep = 1;
+var aiDescription = null;
+
+function getChecked(name) {
+  return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked')).map(function(el){ return el.value; }).join(", ");
+}
+function getRadio(name) {
+  var el = document.querySelector('input[name="' + name + '"]:checked');
+  return el ? el.value : "";
+}
+function syncIdentity() {}
+
+// ── 其它展開 ──
+function toggleOther(name, inputId) {
+  var hasOther = Array.from(document.querySelectorAll('input[name="' + name + '"]:checked'))
+    .some(function(el){ return el.value === "其它"; });
+  var el = document.getElementById(inputId);
+  if (el) el.classList.toggle("visible", hasOther);
+}
+
+// ── 取得 checkbox 值（含其它展開欄位）──
+function getCheckedWithOther(name, otherId) {
+  var vals = Array.from(document.querySelectorAll('input[name="' + name + '"]:checked'))
+    .map(function(el){ return el.value; })
+    .filter(function(v){ return v !== "其它"; });
+  if (otherId) {
+    var otherEl = document.getElementById(otherId);
+    if (otherEl && otherEl.classList.contains("visible")) {
+      var otherVal = otherEl.value.trim();
+      if (otherVal) vals.push(otherVal);
+    }
+  }
+  return vals.join(", ");
+}
+
+// ── 主營產品分類 ──
+function addProductCat() {
+  var list = document.getElementById("productCatList");
+  var row = document.createElement("div");
+  row.className = "product-cat-row";
+  row.innerHTML = '<input class="product-cat-input" placeholder="例：五金零件" />'
+    + '<button class="btn-remove-cat" onclick="removeCat(this)">✕</button>';
+  list.appendChild(row);
+}
+function removeCat(btn) { btn.parentElement.remove(); }
+
+function getProductCats() {
+  return Array.from(document.querySelectorAll(".product-cat-input"))
+    .map(function(el){ return el.value.trim(); })
+    .filter(Boolean)
+    .join("、");
+}
+
+// ─── 欄位定義（59 欄，順序固定）───────────────────────
+var COL_HEADERS = [
+  "* Product title","* Product image 1","Product image 2","Product image 3","Product image 4","Product image 5","Product image 6",
+  "Product description","Place of origin","Brand name","Category",
+  "Product attribute name 1","Product attribute value 1","Product attribute name 2","Product attribute value 2",
+  "Product attribute name 3","Product attribute value 3","Product attribute name 4","Product attribute value 4",
+  "Product attribute name 5","Product attribute value 5",
+  "Sell product by","Batch quantity","Unit","Currency","Pricing type","Inventory","SPU ID (Model number)",
+  "SKU code","SKU pricing",
+  "SKU attribute name 1","SKU attribute value 1","SKU attribute name 2","SKU attribute value 2",
+  "SKU attribute name 3","SKU attribute value 3","SKU attribute name 4","SKU attribute value 4",
+  "Tiered pricing 1","MOQ 1","Tiered pricing 2","MOQ 2","Tiered pricing 3","MOQ 3",
+  "Range pricing (Lower limit)","Range pricing (Higher limit)",
+  "* Gross weight (KG)","* Shipping template name","* Shipping quantity 1","* Estimated shipping lead time 1",
+  "Shipping quantity 2","Estimated shipping lead time 2","Shipping quantity 3","Estimated shipping lead time 3",
+  "* Item length (cm)","* Item width (cm)","* Item height (cm)","* Logistics attributes","HS Code"
+];
+
+var ROW2 = (function(){
+  var r = new Array(59).fill(null);
+  r[0]  = "Basic Information of Your Listings on Alibaba.com";
+  r[10] = "Category details";
+  r[21] = "Selling type";
+  r[27] = "SKU Pricing \n(Fill out this section ONLY if you have selected corresponding selling method in column Z) ";
+  r[38] = "Tiered pricing\n(Fill out this section ONLY if you have selected corresponding selling method in column Z) ";
+  r[44] = "Range pricing\n(Fill in this section ONLY if you have selected the corresponding selling method in column Z) ";
+  r[46] = "Logistics information \n(Green * are mandatory fields for RTS products)";
+  return r;
+})();
+
+var ROW4 = [
+  "1. Do not enter any unsupported symbols such as !\n2. This field is limited to 128 characters",
+  "1. One cell for one image URL.\n2. It contains https:// \n3. The URL must be valid.",
+  "Same rule as cell B4","Same rule as cell B4","Same rule as cell B4","Same rule as cell B4",
+  "Same rule as cell B4\n\nMaximum of 6 images allowed.",
+  "1. Product description will be shown on the product page.\n2. This field is limited to 20,000 characters in length.",
+  "Fill them in if useful, otherwise leave blank","Fill them in if useful, otherwise leave blank",
+  "Fill in your preferred category.\nIf left blank, this field will be generated by Alibaba AI",
+  "Attribute name for the product.\n* Category attribute will not affect the pricing & inventory.",
+  "Attribute value for the product.\n* Category attribute will not affect the pricing & inventory.",
+  "Same rule as cell L4","Same rule as cell M4","Same rule as cell L4","Same rule as cell M4",
+  "Same rule as cell L4","Same rule as cell M4","Same rule as cell L4","Same rule as cell M4",
+  "Select to sell by unit or batch",
+  "Only fill in this column if \"Selling method\" is \"By batch\". Enter the number of units per batch.\n\nYou can't write zero or negative numbers in this column.",
+  "If left empty, the unit will be pieces by default. ",
+  "Fill in the currency code (ISO 4217). E.g.: USD",
+  "Tiered pricing: Please fill in columns K - P.\nSKU pricing: Please fill in columns V - AE.\nRange pricing: Please fill in columns AS - AT.",
+  "Inventory of the product. Only non-zero integers are supported. If you leave it blank, we will set it to 9999999 by default.",
+  "This is a mandatory field if you have more than one SKU. \nAll rows to be grouped into a single product listing must share the same SPU ID to ensure accurate grouping.",
+  "SKU ID is not mandatory. \nBut if sellers choose to fill it out, all rows must have unique SKU IDs.",
+  "Price of the product specific SKU.\nFill in the numbers only.\nDo not enter 0.",
+  "Attribute name for this product. This attribute will affect the pricing & inventory.",
+  "Attribute value for this product. E.g.: Green\nOne cell for one value.\n70 characters limit per value.",
+  "Same rule as cell AE4\nFill in if useful, otherwise leave blank","Same rule as cell AF4\nFill in if useful, otherwise leave blank",
+  "Same rule as cell AE4\nFill in if useful, otherwise leave blank","Same rule as cell AF4\nFill in if useful, otherwise leave blank",
+  "Same rule as cell AE4\nFill in if useful, otherwise leave blank","Same rule as cell AF4\nFill in if useful, otherwise leave blank",
+  "1st pricing tier\n\nTiered pricing 1 > Tiered pricing 2 > Tiered pricing 3\n\nFill in with numbers only.",
+  "1st tier MOQ\n\nMOQ 1 < MOQ 2 < MOQ 3\n\nFill in with numbers only.",
+  "2nd pricing tier\n\nTiered pricing 1 > Tiered pricing 2 > Tiered pricing 3.\n\nFill in with numbers only.",
+  "2nd tier MOQ\n\nMOQ 1 < MOQ 2 < MOQ 3\n\nFill in with numbers only.",
+  "3rd pricing tier\n\nTiered pricing 1 > Tiered pricing 2 > Tiered pricing 3.\n\nFill in with numbers only.",
+  "3rd tier MOQ\n\nMOQ 1 < MOQ 2 < MOQ 3\n\nFill in with numbers only.",
+  "The lower limit price for range pricing.\n\nFill in with numbers only.",
+  "The higher limit price for range pricing.\n\nFill in with numbers only.",
+  "Mandatory field if you want to list RTS products.\n\nFill in with numbers only. \nDo not enter 0.",
+  "Mandatory field if you want to list RTS products.",
+  "Used for setting quantity-based lead time.\n\nShipping quantity 1 < Shipping quantity 2 < Shipping quantity 3",
+  "The estimated lead time for shipping quantity.\nFill in with numbers only. \nDo not enter 0.",
+  "Same rule for cell AW4","Same rule for cell AX4","Same rule for cell AW4","Same rule for cell AX4",
+  "The longest side of your item","The shorter side of your item","Vertical measurement from base to top",
+  "Key characteristics or features that define how goods or services are managed and transported.",
+  "An internationally standardized number used to classify products for customs and trade."
+];
+
+var MERGES = [
+  { s:{r:0,c:21}, e:{r:0,c:25} },
+  { s:{r:1,c:0},  e:{r:1,c:9}  },
+  { s:{r:1,c:10}, e:{r:1,c:20} },
+  { s:{r:1,c:21}, e:{r:1,c:26} },
+  { s:{r:1,c:27}, e:{r:1,c:37} },
+  { s:{r:1,c:38}, e:{r:1,c:43} },
+  { s:{r:1,c:44}, e:{r:1,c:45} },
+  { s:{r:1,c:46}, e:{r:1,c:58} }
+];
+
+// ══════════════════════════════════════════════════════
+// 工具函式
+// ══════════════════════════════════════════════════════
+function v(id) { return (document.getElementById(id)||{}).value || ""; }
+function vn(id) { var x = parseFloat(v(id)); return isNaN(x) ? null : x; }
+function vi(id) { var x = parseInt(v(id)); return isNaN(x) ? null : x; }
+function showMsg(id, text, type) { var el = document.getElementById(id); if(!el) return; el.textContent = text; el.className = "msg " + type; }
+function hideMsg(id) { var el = document.getElementById(id); if(el) el.className = "msg"; }
+
+function copyPrompt(textId, btnId) {
+  var text = document.getElementById(textId).textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById(btnId);
+    btn.textContent = "✓ 已複製！";
+    btn.classList.add("copied");
+    setTimeout(function(){ btn.textContent = "一鍵複製"; btn.classList.remove("copied"); }, 2000);
+  });
+}
+
+function goStep(n) {
+  for (var i = 1; i <= 5; i++) {
+    var card = document.getElementById("step" + i);
+    var prog = document.getElementById("prog" + i);
+    if (i === n) { card.classList.add("visible"); prog.classList.add("active"); prog.classList.remove("done"); }
+    else if (i < n) { card.classList.remove("visible"); prog.classList.remove("active"); prog.classList.add("done"); }
+    else { card.classList.remove("visible"); prog.classList.remove("active","done"); }
+  }
+  currentStep = n;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 1 — 產出旺舖介紹 Prompt
+// ══════════════════════════════════════════════════════
+function generateStorefrontPrompt() {
+  var coName      = v("companyName");
+  var coWebsite   = v("companyWebsite");
+  var coScale     = v("companyScale");
+  var coCats      = getProductCats();
+  var coKeywords  = v("productKeywords");
+  var coMarket    = getCheckedWithOther("coMarket", "coMarketOther");
+  var coAdv       = getCheckedWithOther("coAdv", "coAdvOther");
+  var coCert      = v("companyCert");
+  var coCustom    = getRadio("customService");
+  var coSample    = getRadio("sampleService");
+  var coIdentity  = getRadio("identity");
+  var coPricing   = getCheckedWithOther("coPricing", "coPricingOther");
+  var coStyle     = getRadio("storeStyle");
+
+  if (!coName) {
+    showMsg("step1Msg", "✗ 請填寫「公司名稱」", "err"); return;
+  }
+  hideMsg("step1Msg");
+
+  var styleGuide = coStyle
+    ? "Tone & style: " + coStyle + " — adjust vocabulary, sentence structure, and overall feel accordingly.\n"
+    : "";
+
+  var prompt =
+"# Alibaba.com 旺舖公司介紹撰寫任務\n\n" +
+"Note: The seller information below may be written in Chinese or English. Please read and understand it, then output entirely in English.\n\n" +
+"## 公司資料（Seller-provided）\n" +
+"- Company name: " + coName + "\n" +
+(coWebsite   ? "- Website: " + coWebsite + "\n" : "") +
+(coScale     ? "- Scale / founding: " + coScale + "\n" : "") +
+(coIdentity  ? "- Business type: " + coIdentity + "\n" : "") +
+(coCats      ? "- Main product categories: " + coCats + "\n" : "") +
+(coKeywords  ? "- Product keywords: " + coKeywords + "\n" : "") +
+(coMarket    ? "- Target markets: " + coMarket + "\n" : "") +
+(coAdv       ? "- Core advantages: " + coAdv + "\n" : "") +
+(coPricing   ? "- Pricing strategy: " + coPricing + "\n" : "") +
+(coCert      ? "- Certifications: " + coCert + "\n" : "") +
+(coCustom    ? "- Customization service: " + coCustom + "\n" : "") +
+(coSample    ? "- Sample service: " + coSample + "\n" : "") +
+"\n## 任務\n" +
+"Write the Alibaba storefront (旺舖) company introduction for this supplier.\n" +
+"This text will be read by international B2B buyers on the supplier's storefront page.\n\n" +
+"## Writing Rules\n" +
+"1. Professional, buyer-focused tone — address buyer concerns: reliability, quality, lead time, after-sales\n" +
+"2. " + styleGuide +
+"3. Use only facts provided above. For missing details write [Please fill in: ___]\n" +
+"4. No emoji. No platform-status claims (Gold Supplier, Verified, etc.)\n" +
+"5. Output entirely in English\n\n" +
+"## Output Format — wrap the entire output in ONE ``` code block for one-click copy:\n\n" +
+"```\n" +
+"Company Overview:\n" +
+"<2–3 paragraphs: company background, founding story, scale, and market positioning>\n\n" +
+"Our Advantages:\n" +
+"<bullet list: 4–6 specific advantage points, each one sentence, concrete and quantified where possible>\n\n" +
+"Product Range:\n" +
+"<brief paragraph describing main product categories and keywords buyers can search>\n\n" +
+"Services:\n" +
+"<bullet list: customization options, sample policy, certifications, QC process, lead time, payment terms>\n\n" +
+"Why Choose Us:\n" +
+"<1 closing paragraph with a clear value proposition for international buyers in target markets>\n" +
+"```";
+
+  document.getElementById("storefrontPromptText").textContent = prompt;
+  document.getElementById("storefrontPromptBox").style.display = "block";
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 2 — 產出拓品屬性 Prompt
+// ══════════════════════════════════════════════════════
+function generateAttrPrompt() {
+  var name = v("productName"), desc = v("productDesc");
+  if (!name || !desc) {
+    showMsg("step2Msg", "✗ 請填寫「產品名稱」和「產品描述」", "err");
+    return;
+  }
+  hideMsg("step2Msg");
+
+  var features = v("productFeatures");
+  var market   = v("targetMarket");
+
+  var prompt =
+"# Product Listing Attribute Research\n\n" +
+"Note: The seller information below may be written in Chinese or English. Please read and understand it, then output everything in English.\n\n" +
+"## Product Information\n" +
+"- **Product name**: " + name + "\n" +
+"- **Description**: " + desc + "\n" +
+(features ? "- **Key features**: " + features + "\n" : "") +
+(market   ? "- **Target market**: " + market + "\n"  : "") +
+"\n" +
+"## Your Task\n" +
+"Suggest exactly **5 product attributes** that can be used to create differentiated Alibaba.com B2B listings for this product.\n" +
+"For each attribute, provide realistic values that buyers commonly search for.\n\n" +
+"## Output Format — follow EXACTLY, two sections:\n\n" +
+"---\n\n" +
+"**Section 1 — Attribute names (output as a JSON code block so I can copy with one click):**\n\n" +
+"```json\n" +
+'["attribute1", "attribute2", "attribute3", "attribute4", "attribute5"]\n' +
+"```\n\n" +
+"---\n\n" +
+"**Section 2 — Values for each attribute (attribute name as plain text, values as JSON code block):**\n\n" +
+"attribute1:\n" +
+"```json\n" +
+'["value1", "value2", "value3"]\n' +
+"```\n\n" +
+"attribute2:\n" +
+"```json\n" +
+'["value1", "value2", "value3"]\n' +
+"```\n\n" +
+"attribute3:\n" +
+"```json\n" +
+'["value1", "value2", "value3"]\n' +
+"```\n\n" +
+"attribute4:\n" +
+"```json\n" +
+'["value1", "value2", "value3"]\n' +
+"```\n\n" +
+"attribute5:\n" +
+"```json\n" +
+'["value1", "value2", "value3"]\n' +
+"```\n\n" +
+"---\n\n" +
+"**Rules:**\n" +
+"- English only\n" +
+"- Exactly 5 attributes in Section 1\n" +
+"- Each attribute must have 3–8 realistic values in Section 2\n" +
+"- Output ONLY the two sections above, no extra explanation";
+
+  document.getElementById("attrPromptText").textContent = prompt;
+  document.getElementById("attrPromptBox").style.display = "block";
+  document.getElementById("step2Next").style.display = "block";
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 2 — 產出商品詳情頁 Prompt
+// ══════════════════════════════════════════════════════
+function generateDescPrompt() {
+  var name      = v("productName");
+  var desc      = v("productDesc");
+  var features  = v("productFeatures");
+  var market    = v("targetMarket");
+  var coName     = v("companyName");
+  var coScale    = v("companyScale");
+  var coStr      = "";
+  var coIdentity = getRadio("identity");
+  var coAdv      = getCheckedWithOther("coAdv", "coAdvOther");
+  var coCert     = v("companyCert");
+  var coCustom   = getRadio("customService");
+  var coSample   = getRadio("sampleService");
+  var coMarket   = getCheckedWithOther("coMarket", "coMarketOther");
+  var pkg       = v("descPkg");
+  var moq       = v("descMoq");
+  var leadtime  = v("descLeadtime");
+  var custom    = v("descCustomize");
+  var payment   = v("descPayment");
+  var buyer     = v("descBuyerType");
+
+  // 自動讀取 Step 2 已填的屬性
+  var attrNamesRaw = v("attrNames");
+  var attrInfo = "";
+  if (attrNamesRaw) {
+    var attrNames = parseAttrInput(attrNamesRaw);
+    var attrParts = [];
+    attrNames.forEach(function(n) {
+      var vals = v("attrVal_" + n);
+      if (n && vals) attrParts.push(n + ": " + vals);
+      else if (n)    attrParts.push(n + ": [various]");
+    });
+    if (attrParts.length) attrInfo = attrParts.join("; ");
+  }
+
+  if (!name || !desc) {
+    showMsg("step5Msg", "✗ 請先在 Step 2 填寫「產品名稱」和「產品描述」", "err"); return;
+  }
+  hideMsg("step5Msg");
+
+  var prompt =
+"# Alibaba B2B Product Detail Page\n\n" +
+"Note: The seller information below may be written in Chinese or English. Please read and understand it, then output everything in English.\n\n" +
+"## Seller Information\n" +
+"- Product: " + name + "\n" +
+"- Description: " + desc + "\n" +
+(features  ? "- Key features: " + features + "\n" : "") +
+(market    ? "- Target market: " + market + "\n" : "") +
+(attrInfo  ? "- Product variants/attributes: " + attrInfo + "\n" : "") +
+(pkg       ? "- Packaging: " + pkg + "\n" : "") +
+(moq       ? "- MOQ: " + moq + "\n" : "") +
+(leadtime  ? "- Lead time: " + leadtime + "\n" : "") +
+(custom    ? "- Customization: " + custom + "\n" : "") +
+(payment   ? "- Payment terms: " + payment + "\n" : "") +
+(buyer     ? "- Target buyer type: " + buyer + "\n" : "") +
+(coName     ? "- Company name: " + coName + "\n" : "") +
+(coScale    ? "- Company scale/history: " + coScale + "\n" : "") +
+(coIdentity ? "- Company type: " + coIdentity + "\n" : "") +
+(coAdv      ? "- Core advantages: " + coAdv + "\n" : "") +
+(coCert     ? "- Certifications: " + coCert + "\n" : "") +
+(coMarket   ? "- Target markets: " + coMarket + "\n" : "") +
+(coCustom   ? "- Customization service: " + coCustom + "\n" : "") +
+(coSample   ? "- Sample service: " + coSample + "\n" : "") +
+"\n## Writing Rules — strictly follow\n" +
+"1. You are writing copy that BUYERS will read — use persuasion frameworks internally but NEVER mention CVP, FABE, KSP, etc. in the output\n" +
+"2. Lead with buyer pain points or desires, then present the product as the solution\n" +
+"3. Base all content on the seller's actual information. Do NOT fabricate numbers, certifications, or customer cases\n" +
+"4. For any field not provided, write a reasonable placeholder marked as [Please fill in: ___]\n" +
+"5. Do NOT mention Gold Supplier / Verified Supplier / platform tenure\n" +
+"6. No emoji or emoticons. No section numbers (①②③). Output entirely in English\n" +
+"\n## Output Format — produce exactly 3 parts in this order:\n\n" +
+"**PART 1 — Reference (plain text, outside any code block):**\n" +
+"Suggested Title: <one title line, 90–110 characters, core selling point + keyword + material + use>\n" +
+"Suggested Keywords: <5–10 keywords, comma-separated>\n\n" +
+"**PART 2 — Product Description Page Content (wrap this entire section in ONE ``` code block):**\n" +
+"The code block must contain ONLY the following content in order — no labels like [Product Description] or [Specifications], just the actual text:\n\n" +
+"<2–3 flowing paragraphs of persuasive product description for buyers, within 2,000 characters>\n\n" +
+"Specifications:\n" +
+"<bullet list of specs: material, size/weight, MOQ, lead time, certifications, available variants, etc.>\n\n" +
+"About Us:\n" +
+"<2 paragraphs of company profile written for buyers>\n\n" +
+"FAQ:\n" +
+"Q: <buyer question>\n" +
+"A: <concise answer, max 3 sentences>\n" +
+"(repeat for 6–8 Q&A pairs)\n\n" +
+"**PART 3 — Information Gap (plain text, outside code block, for seller only):**\n" +
+"List any key information still missing that would make this listing stronger.\n";
+
+  document.getElementById("descPromptText").textContent = prompt;
+  document.getElementById("descPromptBox").style.display = "block";
+  document.getElementById("step5DescInput").style.display = "block";
+}
+
+function onDescInput() {
+  var val = document.getElementById("aiDescriptionInput").value.trim();
+  if (val) {
+    aiDescription = val;
+    document.getElementById("descSavedHint").textContent = "✓ 已儲存，將用於所有商品的 Product description 欄位";
+    document.getElementById("descSavedHint").style.color = "#16a34a";
+  } else {
+    aiDescription = null;
+    document.getElementById("descSavedHint").textContent = "";
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 3 — 解析屬性名稱，產生輸入框
+// ══════════════════════════════════════════════════════
+function parseAttrNames() {
+  var raw = v("attrNames").trim();
+  var grid = document.getElementById("attrValueGrid");
+  grid.innerHTML = "";
+  if (!raw) return;
+
+  // 支援兩種格式：JSON 陣列 ["a","b","c"] 或逗號分隔 a,b,c
+  var names = parseAttrInput(raw);
+  names.forEach(function(name) {
+    var row = document.createElement("div");
+    row.className = "attr-row";
+    row.innerHTML =
+      '<div class="attr-name-tag">' + name + '</div>' +
+      '<input class="attr-value-input" id="attrVal_' + name + '" placeholder="貼上 AI 的值（支援 JSON 格式 或 逗號分隔）" />';
+    grid.appendChild(row);
+  });
+}
+
+// 解析屬性輸入：支援 JSON 陣列 ["a","b"] 或純逗號分隔 a,b,c
+function parseAttrInput(raw) {
+  raw = raw.trim();
+  // 嘗試 JSON 解析
+  try {
+    var arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return arr.map(function(s){ return String(s).trim(); }).filter(Boolean).slice(0, 5);
+  } catch(e) {}
+  // fallback：逗號分隔
+  return raw.split(",").map(function(s){ return s.trim().replace(/^"|"$/g,""); }).filter(Boolean).slice(0, 5);
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 3 — 產出拓品 Prompt
+// ══════════════════════════════════════════════════════
+function generateExpansionPrompt() {
+  var attrNamesRaw = v("attrNames").trim();
+  if (!attrNamesRaw) { showMsg("step3Msg", "✗ 請先貼入屬性名稱", "err"); return; }
+
+  var names = parseAttrInput(attrNamesRaw);
+  var attrLines = [];
+  var missingVals = [];
+
+  names.forEach(function(name) {
+    var raw = v("attrVal_" + name).trim();
+    if (!raw) { missingVals.push(name); return; }
+    // 解析值：JSON 陣列或逗號分隔
+    var vals;
+    try {
+      var arr = JSON.parse(raw);
+      if (Array.isArray(arr)) vals = arr.map(function(s){ return String(s).trim(); }).filter(Boolean);
+    } catch(e) {}
+    if (!vals) vals = raw.split(",").map(function(s){ return s.trim().replace(/^"|"$/g,""); }).filter(Boolean);
+    attrLines.push(name + ": " + vals.join(", "));
+  });
+
+  if (missingVals.length > 0) {
+    showMsg("step3Msg", "✗ 請填寫以下屬性的值：" + missingVals.join(", "), "err");
+    return;
+  }
+
+  var count = parseInt(v("listingCount")) || 10;
+  count = Math.min(Math.max(count, 1), 30);
+
+  var productName = v("productName") || "(產品名稱)";
+  var productDesc = v("productDesc") || "";
+  var features    = v("productFeatures") || "";
+  var market      = v("targetMarket") || "";
+
+  hideMsg("step3Msg");
+
+  var prompt =
+"# Alibaba B2B Listing Expansion\n\n" +
+"Note: The seller information below may be written in Chinese or English. Please read and understand it, then output everything in English.\n\n" +
+"## Product Information\n" +
+"- **Product**: " + productName + "\n" +
+(productDesc ? "- **Description**: " + productDesc + "\n" : "") +
+(features    ? "- **Features**: " + features + "\n" : "") +
+(market      ? "- **Target markets**: " + market + "\n" : "") +
+"\n" +
+"## Available Attributes\n" +
+attrLines.map(function(l){ return "- " + l; }).join("\n") + "\n\n" +
+"## Task\n" +
+"Generate **" + count + "** differentiated product listings for Alibaba.com B2B.\n\n" +
+"Each listing must:\n" +
+"1. Select ONE specific value for EACH attribute to create a focused product variant\n" +
+"2. Have a unique English title (max 128 characters) targeting different search keywords\n" +
+"3. Target a different buyer angle: application scene / buyer type / spec focus / regional market / selling point\n" +
+"4. Have no duplicate titles across all listings\n\n" +
+"## Output Format\n" +
+"Output the JSON **inside a ```json code block** so I can copy it with one click.\n\n" +
+"```json\n" +
+"{\n" +
+'  "listings": [\n' +
+"    {\n" +
+'      "title": "Product title in English, max 128 chars",\n' +
+'      "attributes": [\n' +
+names.map(function(n){ return '        { "name": "' + n + '", "value": "chosen_value" }'; }).join(",\n") + "\n" +
+"      ]\n" +
+"    }\n" +
+"  ]\n" +
+"}\n" +
+"```\n\n" +
+"Rules:\n" +
+"- Output ONLY the JSON code block, nothing before or after\n" +
+"- The listings array must have exactly " + count + " items\n" +
+"- Every listing must have exactly " + names.length + " attributes (same attribute names, different values)\n" +
+"- All text in English\n" +
+"- Titles must all be unique";
+
+  document.getElementById("expandPromptText").textContent = prompt;
+  document.getElementById("expandPromptBox").style.display = "block";
+  document.getElementById("step3Next").style.display = "block";
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 4 — 驗證 JSON
+// ══════════════════════════════════════════════════════
+function validateJSON() {
+  var raw = v("jsonInput").trim();
+  var msg = document.getElementById("step4Msg");
+  var preview = document.getElementById("jsonPreview");
+  parsedListings = null;
+
+  if (!raw) { msg.className = "msg"; preview.style.display = "none"; return; }
+
+  // 去掉 ```json ... ``` 包裹
+  raw = raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/,"").trim();
+  // 找 JSON 起點
+  var s = raw.indexOf("{"); var sa = raw.indexOf("[");
+  var start = s === -1 ? sa : sa === -1 ? s : Math.min(s, sa);
+  if (start > 0) raw = raw.slice(start);
+
+  try {
+    var data = JSON.parse(raw);
+    if (!data.listings || !Array.isArray(data.listings)) throw new Error("缺少 listings 陣列");
+    var bad = -1;
+    data.listings.forEach(function(l, i) {
+      if (!l.title) bad = i;
+      if (!Array.isArray(l.attributes) || l.attributes.length === 0) bad = i;
+    });
+    if (bad >= 0) throw new Error("第 " + (bad+1) + " 筆格式不正確（需有 title 和 attributes）");
+
+    parsedListings = data.listings;
+    showMsg("step4Msg", "✓ JSON 格式正確，共 " + parsedListings.length + " 筆 listing", "ok");
+    document.getElementById("step4Next").style.display = "block";
+
+    var html = "<table><tr><th>#</th><th>標題（前 70 字）</th><th>屬性</th></tr>";
+    parsedListings.slice(0, 6).forEach(function(l, i) {
+      var attrStr = (l.attributes||[]).map(function(a){return a.name+": "+a.value;}).join(" / ");
+      html += "<tr><td>" + (i+1) + "</td><td>" + (l.title||"").slice(0,70) + "</td><td style='font-size:11px;color:#64748b'>" + attrStr + "</td></tr>";
+    });
+    if (parsedListings.length > 6) html += "<tr><td colspan='3' style='text-align:center;color:#94a3b8;padding:8px'>... 還有 " + (parsedListings.length-6) + " 筆</td></tr>";
+    html += "</table>";
+    preview.innerHTML = html;
+    preview.style.display = "block";
+  } catch(e) {
+    parsedListings = null;
+    showMsg("step4Msg", "✗ JSON 解析失敗：" + e.message, "err");
+    preview.style.display = "none";
+    document.getElementById("step4Next").style.display = "none";
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 4 — 產出 Excel
+// ══════════════════════════════════════════════════════
+function generateExcel() {
+  var genMsg = document.getElementById("genMsg");
+  genMsg.className = "msg";
+
+  if (!parsedListings || parsedListings.length === 0) {
+    showMsg("genMsg", "✗ 請先貼入有效的 JSON", "err"); return;
+  }
+
+  // 讀取固定資料（詳情頁優先用 Step 2 AI 產出，否則用 Step 1 基本描述）
+  var description  = aiDescription || v("productDesc");
+  var origin       = v("origin");
+  var brand        = v("brand");
+  var category     = null; // 留空，由阿里 AI 自動判斷
+  var img1=v("img1"), img2=v("img2"), img3=v("img3"), img4=v("img4"), img5=v("img5"), img6=v("img6");
+  var sellBy       = getSellBy();
+  var batchQty     = vi("batchQty");
+  var unit         = v("unit") || "";
+  var currency     = v("currency") || "USD";
+  var pricingType  = getPricingType();
+  var inventory    = vi("inventory");
+  // Tiered / Range 用 spuId；SKU 用 skuSpuId
+  var spuId        = pricingType === "SKU pricing" ? v("skuSpuId") : v("spuId");
+  // Tiered pricing
+  var t1p=vn("t1p"), t1m=vi("t1m"), t2p=vn("t2p"), t2m=vi("t2m"), t3p=vn("t3p"), t3m=vi("t3m");
+  // SKU pricing
+  var skuCode=v("skuCode"), skuPrice=vn("skuPrice");
+  var skuAn1=v("skuAn1"), skuAv1=v("skuAv1"), skuAn2=v("skuAn2"), skuAv2=v("skuAv2");
+  var skuAn3=v("skuAn3"), skuAv3=v("skuAv3"), skuAn4=v("skuAn4"), skuAv4=v("skuAv4");
+  // Range pricing
+  var rangeLow=vn("rangeLow"), rangeHigh=vn("rangeHigh");
+  var weight       = vn("weight");
+  var shipTemplate = v("shipTemplate");
+  var shipQty1     = vi("shipQty1");
+  var shipLead1    = v("shipLead1");
+  var itemL=vn("itemL"), itemW=vn("itemW"), itemH=vn("itemH");
+  var logisticsAttr = v("logisticsAttr") || "Ordinary goods";
+  var hsCode       = v("hsCode");
+
+  var aoa = [];
+  aoa.push(new Array(59).fill(null)); // Row 1
+  aoa.push(ROW2.slice());              // Row 2
+  aoa.push(COL_HEADERS.slice());       // Row 3
+  aoa.push(ROW4.slice());              // Row 4
+
+  parsedListings.forEach(function(listing, idx) {
+    var attrs = listing.attributes || [];
+    var spuFull = spuId ? (spuId + "-" + String(idx+1).padStart(3,"0")) : null;
+
+    var row = new Array(59).fill(null);
+    row[0]  = listing.title || "";
+    row[1]  = img1 || null;
+    row[2]  = img2 || null;
+    row[3]  = img3 || null;
+    row[4]  = img4 || null;
+    row[5]  = img5 || null;
+    row[6]  = img6 || null;
+    row[7]  = description || null;
+    row[8]  = origin || null;
+    row[9]  = brand || null;
+    row[10] = category || null;
+    // 5 組屬性
+    for (var ai = 0; ai < 5; ai++) {
+      var a = attrs[ai] || {};
+      row[11 + ai*2] = a.name  || null;
+      row[12 + ai*2] = a.value || null;
+    }
+    row[21] = sellBy;
+    row[22] = (sellBy === "batch" && batchQty) ? batchQty : null;
+    row[23] = unit;
+    row[24] = currency;
+    row[25] = pricingType;
+    row[26] = inventory || null;
+    row[27] = spuFull;
+    if (pricingType === "SKU pricing") {
+      // AB-AL：SKU pricing 欄位
+      row[28] = skuCode || null;          // SKU code
+      row[29] = skuPrice || null;         // SKU pricing
+      row[30] = skuAn1 || null; row[31] = skuAv1 || null;
+      row[32] = skuAn2 || null; row[33] = skuAv2 || null;
+      row[34] = skuAn3 || null; row[35] = skuAv3 || null;
+      row[36] = skuAn4 || null; row[37] = skuAv4 || null;
+    }
+    if (pricingType === "Tiered pricing") {
+      row[38] = t1p; row[39] = t1m;
+      row[40] = t2p; row[41] = t2m;
+      row[42] = t3p; row[43] = t3m;
+    }
+    if (pricingType === "Range pricing") {
+      row[44] = rangeLow; row[45] = rangeHigh;
+    }
+    row[46] = weight;
+    row[47] = shipTemplate || null;
+    row[48] = shipQty1 || null;
+    row[49] = shipLead1 || null;
+    // Shipping 2/3 [50-53] 留空
+    row[54] = itemL; row[55] = itemW; row[56] = itemH;
+    row[57] = logisticsAttr;
+    row[58] = hsCode || null;
+
+    aoa.push(row);
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!merges"] = MERGES;
+
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Alibaba default template");
+
+  var filename = "alibaba_listing_" + new Date().toISOString().slice(0,10) + ".xlsx";
+  XLSX.writeFile(wb, filename);
+
+  showMsg("genMsg", "✓ 已下載 " + filename + "（共 " + parsedListings.length + " 筆，前 4 列阿里官方表頭已保留）", "ok");
+
+  setTimeout(function(){
+    var box = document.getElementById("successBox");
+    if (box) box.style.display = "block";
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }, 1200);
+}
+</script>
+</body>
+</html>
