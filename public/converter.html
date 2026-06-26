@@ -1368,14 +1368,14 @@ function generateAttrPrompt() {
 "## Your Task\n" +
 "Suggest exactly **5 product attributes** that can be used to create differentiated Alibaba.com B2B listings for this product.\n" +
 "For each attribute, provide realistic values that buyers commonly search for.\n\n" +
-"## Output Format — follow EXACTLY, two sections:\n\n" +
+"## 輸出格式（請嚴格遵守，共兩個區塊）\n\n" +
 "---\n\n" +
-"**Section 1 — Attribute names (output as a JSON code block so I can copy with one click):**\n\n" +
+"**第一區塊 — 屬性名稱（用 JSON code block 輸出，方便一鍵複製）：**\n\n" +
 "```json\n" +
 '["attribute1", "attribute2", "attribute3", "attribute4", "attribute5"]\n' +
 "```\n\n" +
 "---\n\n" +
-"**Section 2 — Values for each attribute (attribute name as plain text, values as JSON code block):**\n\n" +
+"**第二區塊 — 每個屬性的建議值（屬性名稱用純文字，值用 JSON code block）：**\n\n" +
 "attribute1:\n" +
 "```json\n" +
 '["value1", "value2", "value3"]\n' +
@@ -1397,11 +1397,11 @@ function generateAttrPrompt() {
 '["value1", "value2", "value3"]\n' +
 "```\n\n" +
 "---\n\n" +
-"**Rules:**\n" +
-"- English only\n" +
-"- Exactly 5 attributes in Section 1\n" +
-"- Each attribute must have 3–8 realistic values in Section 2\n" +
-"- Output ONLY the two sections above, no extra explanation";
+"**規則：**\n" +
+"- 屬性名稱與值全部使用英文\n" +
+"- 第一區塊必須恰好 5 個屬性\n" +
+"- 第二區塊每個屬性需提供 3–8 個真實常見的值\n" +
+"- 只輸出以上兩個區塊，不需要其他說明文字";
 
   document.getElementById("attrPromptText").textContent = prompt;
   document.getElementById("attrPromptBox").style.display = "block";
