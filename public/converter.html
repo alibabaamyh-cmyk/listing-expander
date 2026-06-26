@@ -1307,23 +1307,24 @@ function generateStorefrontPrompt() {
 "  目標買家：" + (targetBuyers || na) + "\n" +
 "• 定價策略：" + (coPricing || na) + "\n" +
 (coStyle      ? "• 旺舖風格偏好：" + coStyle + "\n" : "") +
-"\n【第二步：旺舖 OBS 文案生成（中英對照）】\n" +
-"根據以上資訊與第一步分析，為商家生成以下各區塊的旺舖文案。\n" +
-"每個區塊請提供完整的「中文版」與「English version」，不要只翻譯，要根據目標市場買家語境重新撰寫。\n\n" +
-"(1) 關於我們 / About Us\n" +
-"(2) 產品分類 / Product Categories\n" +
-"(3) 公司優勢 / Why Choose Us\n" +
-"(4) 生產流程 / Production Process（工廠/工貿適用）\n" +
-"(5) 認證 / Certificates\n" +
-"(6) 展會 / Exhibitions\n" +
-"(7) 團隊 / Our Team\n" +
-"(8) 項目案例 / Project Examples\n\n" +
-"撰寫要求：\n" +
-"- 針對「" + (coMarket || "目標市場") + "」的買方痛點和採購考量撰寫，有說服力\n" +
-"- 所有內容基於商家填寫的實際資訊，缺少的資料請標記 [請填寫：___]\n" +
-"- 不提及平台身份（Gold Supplier / Verified 等）\n" +
-"- 英文版請使用 B2B 採購語境，專業流暢\n" +
-"- 最後把所有文案（中英）整理在一個程式碼區塊，方便商家一鍵複製";
+"\n【第二步：旺舖 OBS 文案生成】\n" +
+"根據以上資訊與第一步分析，依序生成以下 8 個旺舖區塊。\n\n" +
+"每個區塊的格式如下：\n" +
+"▸ 先用【中文】說明這個區塊的撰寫角度與對買家的吸引力\n" +
+"▸ 再把要貼到阿里後台的實際文案，用 ``` code block 包住（英文），方便商家一鍵複製\n\n" +
+"(1) About Us\n" +
+"(2) Product Categories\n" +
+"(3) Why Choose Us\n" +
+"(4) Production Process（工廠/工貿適用，貿易商可跳過）\n" +
+"(5) Certificates\n" +
+"(6) Exhibitions\n" +
+"(7) Our Team\n" +
+"(8) Project Examples\n\n" +
+"撰寫規則：\n" +
+"- 中文說明部分：引導商家理解每個區塊的商業邏輯，可指出補強建議\n" +
+"- 英文文案部分（code block）：針對「" + (coMarket || "目標市場") + "」買家語境撰寫，專業有說服力\n" +
+"- 所有英文文案基於商家提供的實際資訊；缺少的資料請在 code block 內標記 [Please fill in: ___]\n" +
+"- 不提及平台身份（Gold Supplier / Verified 等）";
 
   document.getElementById("storefrontPromptText").textContent = prompt;
   document.getElementById("storefrontPromptBox").style.display = "block";
