@@ -340,6 +340,36 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
       <input id="coPricingOther" class="other-input" placeholder="請填寫其它定價策略" />
     </div>
 
+    <div class="field" style="margin-top:14px">
+      <label>生產流程描述（選填）</label>
+      <textarea id="production" rows="2" placeholder="例：自有工廠 → 來料品管 → 生產製造 → QC 出貨，全程可追溯"></textarea>
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>研發技術能力（選填）</label>
+      <input id="rdTech" placeholder="例：獨立研發團隊、10年以上 OEM/ODM 經驗、獲 3 項專利" />
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>展會經驗（選填）</label>
+      <input id="exhibitions" placeholder="例：Canton Fair、香港環球資源展、MEDICA 醫療展" />
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>團隊介紹（選填）</label>
+      <input id="team" placeholder="例：50人專業團隊，外貿業務均有 5年以上經驗" />
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>訂單彈性 / MOQ（選填）</label>
+      <input id="orderFlex" placeholder="例：MOQ 100pcs，支持小單快反，樣品 3-5天可出" />
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>目標買家描述（選填）</label>
+      <input id="targetBuyers" placeholder="例：全球大品牌商、線下連鎖超市、電商平台賣家" />
+    </div>
+
     <hr class="divider">
 
     <!-- ── 風格設計 ── -->
@@ -1241,54 +1271,59 @@ function generateStorefrontPrompt() {
   var coIdentity  = getRadio("identity");
   var coPricing   = getCheckedWithOther("coPricing", "coPricingOther");
   var coStyle     = getRadio("storeStyle");
+  var production  = v("production");
+  var rdTech      = v("rdTech");
+  var exhibitions = v("exhibitions");
+  var team        = v("team");
+  var orderFlex   = v("orderFlex");
+  var targetBuyers = v("targetBuyers");
 
   if (!coName) {
-    showMsg("step1Msg", "✗ 請填寫「公司名稱」", "err"); return;
+    showMsg("step1Msg", "✗ 請填寫「公司名稱（英文）」", "err"); return;
   }
   hideMsg("step1Msg");
 
-  var styleGuide = coStyle
-    ? "Tone & style: " + coStyle + " — adjust vocabulary, sentence structure, and overall feel accordingly.\n"
-    : "";
-
+  var na = "未填";
   var prompt =
-"# Alibaba.com 旺舖公司介紹撰寫任務\n\n" +
-"Note: The seller information below may be written in Chinese or English. Please read and understand it, then output entirely in English.\n\n" +
-"## 公司資料（Seller-provided）\n" +
-"- Company name: " + coName + "\n" +
-(coWebsite   ? "- Website: " + coWebsite + "\n" : "") +
-(coScale     ? "- Scale / founding: " + coScale + "\n" : "") +
-(coIdentity  ? "- Business type: " + coIdentity + "\n" : "") +
-(coCats      ? "- Main product categories: " + coCats + "\n" : "") +
-(coKeywords  ? "- Product keywords: " + coKeywords + "\n" : "") +
-(coMarket    ? "- Target markets: " + coMarket + "\n" : "") +
-(coAdv       ? "- Core advantages: " + coAdv + "\n" : "") +
-(coPricing   ? "- Pricing strategy: " + coPricing + "\n" : "") +
-(coCert      ? "- Certifications: " + coCert + "\n" : "") +
-(coCustom    ? "- Customization service: " + coCustom + "\n" : "") +
-(coSample    ? "- Sample service: " + coSample + "\n" : "") +
-"\n## 任務\n" +
-"Write the Alibaba storefront (旺舖) company introduction for this supplier.\n" +
-"This text will be read by international B2B buyers on the supplier's storefront page.\n\n" +
-"## Writing Rules\n" +
-"1. Professional, buyer-focused tone — address buyer concerns: reliability, quality, lead time, after-sales\n" +
-"2. " + styleGuide +
-"3. Use only facts provided above. For missing details write [Please fill in: ___]\n" +
-"4. No emoji. No platform-status claims (Gold Supplier, Verified, etc.)\n" +
-"5. Output entirely in English\n\n" +
-"## Output Format — wrap the entire output in ONE ``` code block for one-click copy:\n\n" +
-"```\n" +
-"Company Overview:\n" +
-"<2–3 paragraphs: company background, founding story, scale, and market positioning>\n\n" +
-"Our Advantages:\n" +
-"<bullet list: 4–6 specific advantage points, each one sentence, concrete and quantified where possible>\n\n" +
-"Product Range:\n" +
-"<brief paragraph describing main product categories and keywords buyers can search>\n\n" +
-"Services:\n" +
-"<bullet list: customization options, sample policy, certifications, QC process, lead time, payment terms>\n\n" +
-"Why Choose Us:\n" +
-"<1 closing paragraph with a clear value proposition for international buyers in target markets>\n" +
-"```";
+"你現在是一名阿里巴巴國際站視覺研究顧問 + B2B採購行為專家。\n\n" +
+"【第一步：旺舖顧問分析】\n" +
+"請依據以下商家資訊，分析市場買方需求、競業狀況，以及商家的核心優勢，給予旺舖建設的具體建議。\n\n" +
+"• 公司名稱：" + coName + "\n" +
+(coWebsite    ? "• 官網：" + coWebsite + "\n" : "") +
+(coScale      ? "• 規模：" + coScale + "\n" : "") +
+"• 主營產品：" + (coCats || na) + "\n" +
+(coKeywords   ? "• 產品關鍵詞：" + coKeywords + "\n" : "") +
+"• 目標市場：" + (coMarket || na) + "\n" +
+"• 核心優勢：" + (coAdv || na) + "\n" +
+"• 定製服務：" + (coCustom || na) + "　樣品服務：" + (coSample || na) + "\n" +
+"• 身份定位：" + (coIdentity || na) + "\n" +
+"• 定位細節：\n" +
+"  生產流程：" + (production || na) + "\n" +
+"  研發技術：" + (rdTech || na) + "\n" +
+"  品質認證：" + (coCert || na) + "\n" +
+"  展會：" + (exhibitions || na) + "\n" +
+"  團隊：" + (team || na) + "\n" +
+"  訂單彈性：" + (orderFlex || na) + "\n" +
+"  目標買家：" + (targetBuyers || na) + "\n" +
+"• 定價策略：" + (coPricing || na) + "\n" +
+(coStyle      ? "• 旺舖風格偏好：" + coStyle + "\n" : "") +
+"\n【第二步：旺舖 OBS 文案生成（中英對照）】\n" +
+"根據以上資訊與第一步分析，為商家生成以下各區塊的旺舖文案。\n" +
+"每個區塊請提供完整的「中文版」與「English version」，不要只翻譯，要根據目標市場買家語境重新撰寫。\n\n" +
+"(1) 關於我們 / About Us\n" +
+"(2) 產品分類 / Product Categories\n" +
+"(3) 公司優勢 / Why Choose Us\n" +
+"(4) 生產流程 / Production Process（工廠/工貿適用）\n" +
+"(5) 認證 / Certificates\n" +
+"(6) 展會 / Exhibitions\n" +
+"(7) 團隊 / Our Team\n" +
+"(8) 項目案例 / Project Examples\n\n" +
+"撰寫要求：\n" +
+"- 針對「" + (coMarket || "目標市場") + "」的買方痛點和採購考量撰寫，有說服力\n" +
+"- 所有內容基於商家填寫的實際資訊，缺少的資料請標記 [請填寫：___]\n" +
+"- 不提及平台身份（Gold Supplier / Verified 等）\n" +
+"- 英文版請使用 B2B 採購語境，專業流暢\n" +
+"- 最後把所有文案（中英）整理在一個程式碼區塊，方便商家一鍵複製";
 
   document.getElementById("storefrontPromptText").textContent = prompt;
   document.getElementById("storefrontPromptBox").style.display = "block";
