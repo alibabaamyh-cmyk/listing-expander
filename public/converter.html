@@ -1481,23 +1481,23 @@ function generateDescPrompt() {
 "4. For any field not provided, write a reasonable placeholder marked as [Please fill in: ___]\n" +
 "5. Do NOT mention Gold Supplier / Verified Supplier / platform tenure\n" +
 "6. No emoji or emoticons. No section numbers (①②③). Output entirely in English\n" +
-"\n## Output Format — produce exactly 3 parts in this order:\n\n" +
-"**PART 1 — Reference (plain text, outside any code block):**\n" +
-"Suggested Title: <one title line, 90–110 characters, core selling point + keyword + material + use>\n" +
-"Suggested Keywords: <5–10 keywords, comma-separated>\n\n" +
-"**PART 2 — Product Description Page Content (wrap this entire section in ONE ``` code block):**\n" +
-"The code block must contain ONLY the following content in order — no labels like [Product Description] or [Specifications], just the actual text:\n\n" +
-"<2–3 flowing paragraphs of persuasive product description for buyers, within 2,000 characters>\n\n" +
+"\n## 輸出格式（請依序輸出以下三個部分）\n\n" +
+"**第一部分 — 給商家的參考建議（純文字，不用放在 code block）：**\n" +
+"建議標題：<一行英文標題，90–110 字元，包含核心賣點 + 關鍵字 + 材質 + 用途>\n" +
+"建議關鍵詞：<5–10 個英文關鍵字，逗號分隔>\n\n" +
+"**第二部分 — 商品詳情頁文案（整段放進一個 ``` code block，方便商家一鍵複製貼到阿里後台）：**\n" +
+"code block 內只包含以下內容，不要加任何標籤或說明文字：\n\n" +
+"<2–3 段流暢的英文產品描述，針對買家痛點撰寫，2,000 字元以內>\n\n" +
 "Specifications:\n" +
-"<bullet list of specs: material, size/weight, MOQ, lead time, certifications, available variants, etc.>\n\n" +
+"<規格條列：材質、尺寸/重量、MOQ、交期、認證、可選規格等>\n\n" +
 "About Us:\n" +
-"<2 paragraphs of company profile written for buyers>\n\n" +
+"<2 段公司介紹，從買家視角撰寫>\n\n" +
 "FAQ:\n" +
-"Q: <buyer question>\n" +
-"A: <concise answer, max 3 sentences>\n" +
-"(repeat for 6–8 Q&A pairs)\n\n" +
-"**PART 3 — Information Gap (plain text, outside code block, for seller only):**\n" +
-"List any key information still missing that would make this listing stronger.\n";
+"Q: <買家常見問題>\n" +
+"A: <簡潔回答，最多 3 句>\n" +
+"（重複 6–8 組 Q&A）\n\n" +
+"**第三部分 — 資訊缺口提示（純文字，給商家參考，不用放在 code block）：**\n" +
+"列出目前缺少哪些資訊，補充後可以讓這個商品列表更有說服力。\n";
 
   document.getElementById("descPromptText").textContent = prompt;
   document.getElementById("descPromptBox").style.display = "block";
