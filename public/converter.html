@@ -1483,8 +1483,8 @@ function generateDescPrompt() {
 "6. No emoji or emoticons. No section numbers (①②③). Output entirely in English\n" +
 "\n## 輸出格式（請依序輸出以下三個部分）\n\n" +
 "**第一部分 — 給商家的參考建議（純文字，不用放在 code block）：**\n" +
-"建議標題：<一行英文標題，90–110 字元，包含核心賣點 + 關鍵字 + 材質 + 用途>\n" +
-"建議關鍵詞：<5–10 個英文關鍵字，逗號分隔>\n\n" +
+"建議標題：<一行英文標題，嚴格控制在 128 字元以內，遵循阿里巴巴標題規範：核心產品詞（放最前）+ 關鍵規格/材質 + 應用場景/目標市場，可加一個 B2B 意圖詞如 Wholesale / OEM / Custom，禁止全大寫、重複關鍵詞、特殊符號、Best Seller 等誇大詞>\n" +
+"建議關鍵詞：<5–10 個英文關鍵字，逗號分隔，對應買家搜尋習慣>\n\n" +
 "**第二部分 — 商品詳情頁文案（整段放進一個 ``` code block，方便商家一鍵複製貼到阿里後台）：**\n" +
 "code block 內只包含以下內容，不要加任何標籤或說明文字：\n\n" +
 "<2–3 段流暢的英文產品描述，針對買家痛點撰寫，2,000 字元以內>\n\n" +
@@ -1615,9 +1615,17 @@ attrLines.map(function(l){ return "- " + l; }).join("\n") + "\n\n" +
 "Generate **" + count + "** differentiated product listings for Alibaba.com B2B.\n\n" +
 "Each listing must:\n" +
 "1. Select ONE specific value for EACH attribute to create a focused product variant\n" +
-"2. Have a unique English title (max 128 characters) targeting different search keywords\n" +
+"2. Have a unique English title strictly within 128 characters, following Alibaba.com title standards (see below)\n" +
 "3. Target a different buyer angle: application scene / buyer type / spec focus / regional market / selling point\n" +
 "4. Have no duplicate titles across all listings\n\n" +
+"## Alibaba.com Title Standards (strictly follow)\n" +
+"**Formula:** Core product keyword + Key spec/material + Application/target market (+ optional B2B intent word)\n" +
+"- First 60 characters are most critical — put the core product keyword first\n" +
+"- Optionally include ONE B2B intent word: Wholesale / OEM / Custom / Factory Direct / Low MOQ\n" +
+"- Each title must target different search keywords — no keyword repetition across listings\n" +
+"- Natural language only — no keyword stuffing, no ALL CAPS, no special symbols or emoji\n" +
+"- Do NOT use: Best Seller, Top Rated, #1, any third-party brand names, platform claims\n" +
+"- Max 128 characters — titles exceeding this will be cut off on Alibaba\n\n" +
 "## Output Format\n" +
 "Output the JSON **inside a ```json code block** so I can copy it with one click.\n\n" +
 "```json\n" +
@@ -1637,7 +1645,7 @@ names.map(function(n){ return '        { "name": "' + n + '", "value": "chosen_v
 "- The listings array must have exactly " + count + " items\n" +
 "- Every listing must have exactly " + names.length + " attributes (same attribute names, different values)\n" +
 "- All text in English\n" +
-"- Titles must all be unique";
+"- Titles must all be unique and follow the Alibaba title standards above";
 
   document.getElementById("expandPromptText").textContent = prompt;
   document.getElementById("expandPromptBox").style.display = "block";
